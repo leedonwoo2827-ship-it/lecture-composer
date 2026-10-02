@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codex Studio — 프롬프트 빌더 & 이미지 스튜디오</title>
+  <script>
+  // 이 앱은 쇼케이스 서버의 /imgstudio 아래에 얹혀 있다. 예전처럼 "/api/..." 로
+  // 부르면 호스트의 API 를 때린다. 페이지가 실제로 놓인 자리에서 기준점을 뽑아
+  // 둔다 — 접두어를 바꿔도 프런트는 안 고쳐도 된다.
+  window.__IS_BASE__ = new URL(".", document.baseURI).pathname.replace(/\/$/, "");
+</script>
+<link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── 상단바: 브랜드 · 워크스페이스 전환 · 로그인 ─────────────── -->
+  <header class="topbar">
+    <div class="brand"><span class="mark">C</span><span class="full">Codex&nbsp;Studio</span></div>
+    <nav class="ws-tabs" id="wsTabs">
+      <button class="ws-tab active" data-ws="builder">✍️ 프롬프트 빌더</button>
+      <button class="ws-tab" data-ws="studio">🎨 이미지 스튜디오</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="auth-chip" id="authChip" title="ChatGPT 로그인 상태">…</div>
+      <button class="icon-btn" id="manualBtn" title="프롬프트 매뉴얼 (새 탭)">📖</button>
+      <button class="icon-btn" id="settingsBtn" title="엔진 설정">⚙️</button>
+    </div>
+  </header>
+
+  <div class="workspaces">
+
+    <!-- ════════════════════════════════════════════════════════
+         워크스페이스 1 · 프롬프트 빌더 (앞 탭)
+         ════════════════════════════════════════════════════════ -->
+    <section class="workspace" id="ws-builder">
+      <div class="builder-bar">
+        <nav class="tabbar" id="builderTabs">
+          <button class="tab active" data-tab="builder">자유 빌더(채팅)</button>
+          <button class="tab" data-tab="generator">프롬프트 생성기</button>
+          <button class="tab" data-tab="archive">보관함</button>
+        </nav>
+        <span class="spacer"></span>
+        <button id="newChatBtn" class="btn ghost" title="대화·생성기·첨부 모두 초기화">↺ 새로 시작</button>
+      </div>
+
+      <!-- 탭 1: 자유 빌더(채팅) -->
+      <section class="panel builder-panel" data-panel="builder">
+        <aside class="preset-sidebar">
+          <div class="sidebar-head"><span>프리셋</span>
+            <button id="reloadPresets" class="btn ghost mini" title="새로고침">↻</button></div>
+          <div class="hint">고르면 「프롬프트 생성기」 탭의 옵션이 자동 세팅됩니다.</div>
+          <div id="presetSidebarList" class="preset-side-list"></div>
+        </aside>
+
+        <div class="builder-main">
+          <main class="chat" id="chat">
+            <div class="msg bot">
+              <div class="bubble">
+                안녕하세요! 만들고 싶은 이미지의 <b>레퍼런스</b>를 첨부하거나 설명해 주세요.
+                대화로 다듬은 뒤 <b>「프롬프트 마감」</b>을 누르면 옆 탭 <b>이미지 스튜디오</b>에 바로 붙일
+                최종 프롬프트가 확정됩니다.
+                <div class="hint">📎 참고 이미지 첨부 · 왼쪽에서 프리셋 선택 · 빠른 산출은 「프롬프트 생성기」 탭.</div>
+              </div>
+            </div>
+          </main>
+
+          <div class="attach-preview" id="attachPreview"></div>
+
+          <form class="composer" id="bldComposer">
+            <button type="button" id="attachBtn" class="icon-btn" title="레퍼런스 첨부">📎</button>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden />
+            <textarea id="input" rows="1" placeholder="메시지를 입력하세요… (Shift+Enter 줄바꿈)"></textarea>
+            <button type="button" id="finalizeBtn" class="btn finalize" title="최종 프롬프트 확정">✓ 프롬프트 마감</button>
+            <button type="submit" id="bldSendBtn" class="btn primary">전송</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 탭 2: 프롬프트 생성기 -->
+      <section class="panel generator-panel hidden" data-panel="generator">
+        <aside class="preset-sidebar">
+          <div class="sidebar-head"><span>프리셋</span>
+            <button class="btn ghost mini reloadPresets" title="새로고침">↻</button></div>
+          <div class="hint">고르면 아래 옵션이 자동 세팅됩니다.</div>
+          <div class="preset-side-list"></div>
+        </aside>
+
+        <div class="gen-main">
+          <div class="gen-grid">
+            <div class="gen-field span2">
+              <label>1. 원고 파일 (PDF·문서에서 텍스트 추출)</label>
+              <div id="genDrop" class="dropzone">
+                <input type="file" id="genFile"
+                       accept=".pdf,.txt,.md,.markdown,.csv,.json,.docx,.hwpx,.pptx" multiple hidden />
+                <div class="dz-inner">
+                  📄 원고 파일을 끌어다 놓거나 <button type="button" id="genPick" class="btn">파일 선택</button>
+                  <span class="hint">PDF · TXT · MD · DOCX · HWPX · PPTX</span>
+                </div>
+              </div>
+              <div id="genFileList" class="file-list"></div>
+            </div>
+
+            <div class="gen-field row"><label>2. 용도</label><div class="btn-group" id="grpPurpose"></div></div>
+            <div class="gen-field row"><label>3. 톤</label><div class="btn-group" id="grpTone"></div></div>
+
+            <div class="gen-field span2 row">
+              <label>4. 색</label>
+              <div class="btn-group" id="grpColor"></div>
+              <input type="text" id="genColorCustom" class="color-custom" placeholder="직접 지정(예: 차콜+오렌지 #E8732A)" />
+            </div>
+
+            <div class="gen-field span2 row"><label>5. 스타일</label><div class="btn-group" id="grpPreset"></div></div>
+
+            <div class="gen-field row"><label>6. 컷 수</label><div class="btn-group" id="grpCuts"></div></div>
+            <div class="gen-field row"><label>7. 메모</label><textarea id="genNote" rows="1" placeholder="꼭 넣을 문구·강조어·금지사항 등"></textarea></div>
+
+            <div class="span2"><span id="cutRecommend" class="muted"></span><span id="cutMsg" class="cut-msg"></span></div>
+
+            <button id="genConfirm" class="btn finalize big span2">✓ 확정 — 프롬프트 만들기</button>
+
+            <details class="save-preset span2">
+              <summary>＋ 현재 옵션을 프리셋으로 저장</summary>
+              <form id="presetForm" class="preset-form">
+                <label>프리셋 이름<input id="pName" type="text" placeholder="예: 카드뉴스8장" /></label>
+                <label>설명(선택)<input id="pDesc" type="text" placeholder="한 줄 설명" /></label>
+                <label>커버 이미지(선택)<input id="pCover" type="file" accept="image/*" /></label>
+                <button type="submit" class="btn primary">현재 선택값으로 저장</button>
+                <span id="presetFormMsg" class="muted"></span>
+              </form>
+            </details>
+
+            <div class="gen-result-wrap span2">
+              <h3>결과</h3>
+              <div id="genResult" class="gen-result">
+                <p class="muted">옵션을 고르고 「확정」을 누르면 여기에 최종 프롬프트가 나옵니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 탭 3: 보관함 -->
+      <section class="panel archive-panel hidden" data-panel="archive">
+        <div class="archive-wrap">
+          <div class="archive-head"><h2>보관함</h2>
+            <button id="reloadArchives" class="btn ghost mini" title="새로고침">↻</button></div>
+          <p class="muted">생성기에서 「📌 보관」한 프롬프트가 여기 게시판에 쌓입니다. 열어서 복사·다운로드하거나 삭제하세요.</p>
+          <div id="archiveList" class="archive-list"></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         워크스페이스 2 · 이미지 스튜디오
+         ════════════════════════════════════════════════════════ -->
+    <section class="workspace" id="ws-studio" hidden>
+      <div class="app" id="app">
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-head">
+            <button class="icon-btn" id="collapseBtn" title="사이드바 접기">☰</button>
+            <span class="brand">🎨 이미지 스튜디오</span>
+          </div>
+          <button class="new-project-btn" id="newProjectBtn">＋ 새 리스트</button>
+          <nav class="proj-list" id="projList">
+            <div class="proj-item active" data-pid="all"><span class="proj-name">📁 전체 이미지</span></div>
+            <div class="proj-item" data-pid="fav"><span class="proj-name">⭐ 즐겨찾기</span></div>
+          </nav>
+        </aside>
+
+        <main class="main">
+          <header class="main-head">
+            <button class="icon-btn only-collapsed" id="expandBtn" title="사이드바 펼치기">☰</button>
+            <h1 id="viewTitle">전체 이미지</h1>
+            <div class="head-actions" id="headActions" hidden>
+              <button class="ghost-btn" id="favBtn">⭐ 즐겨찾기</button>
+              <a class="ghost-btn" id="downloadBtn" download>⬇ 다운로드</a>
+              <button class="ghost-btn danger" id="deleteBtn">🗑 삭제</button>
+            </div>
+          </header>
+
+          <section class="stage" id="stage">
+            <div class="gallery" id="gallery"></div>
+
+            <div class="viewer" id="viewer" hidden>
+              <div class="canvas-wrap" id="canvasWrap">
+                <img id="viewerImg" alt="" />
+                <canvas id="maskCanvas"></canvas>
+              </div>
+              <aside class="edit-panel">
+                <button class="link-btn" id="backToGallery">← 갤러리로</button>
+                <h3>✏️ 자연어 수정</h3>
+                <textarea id="editInstruction" rows="3" placeholder="예: 배경을 노을 지는 해변으로 바꿔줘"></textarea>
+                <div class="mask-row">
+                  <label><input type="checkbox" id="maskToggle" /> 🖱 영역 칠해서 수정</label>
+                  <span class="mask-tools" id="maskTools" hidden>
+                    브러시 <input type="range" id="brushSize" min="8" max="80" value="34" />
+                    <button class="link-btn" id="clearMask">지우기</button>
+                  </span>
+                </div>
+                <p class="hint" id="maskHint" hidden>
+                  이미지 위에서 마우스로 수정할 영역을 칠한 뒤 ‘적용’을 누르세요.
+                </p>
+                <button class="primary-btn" id="applyEditBtn">적용 (수정 생성)</button>
+                <h3>🧬 버전 히스토리</h3>
+                <div class="lineage" id="lineage"></div>
+              </aside>
+            </div>
+          </section>
+
+          <div class="queue-bar" id="queueBar" hidden>
+            <span class="q-icon">📋</span>
+            <span class="q-count" id="queueCount">큐 0/0</span>
+            <span class="q-current" id="queueCurrent"></span>
+            <span class="q-actions">
+              <button class="ghost-btn" id="queueFillBtn" type="button">현재 프롬프트 채우기</button>
+              <button class="ghost-btn" id="queueSkipBtn" type="button">건너뛰기</button>
+              <button class="ghost-btn" id="queueClearBtn" type="button">비우기</button>
+            </span>
+          </div>
+
+          <div class="batch-bar" id="batchBar" hidden>
+            <span class="q-icon">🖼</span>
+            <div class="bb-main">
+              <div class="bb-top">
+                <span class="bb-count" id="batchBarCount">일괄 생성</span>
+                <span class="bb-cur" id="batchBarCurrent"></span>
+              </div>
+              <div class="bb-track"><div class="bb-fill" id="batchBarFill"></div></div>
+            </div>
+            <span class="q-actions">
+              <button class="ghost-btn" id="batchOpenDirBtn" type="button">📁 폴더 열기</button>
+              <button class="ghost-btn" id="batchRetryBtn" type="button" hidden>↻ 실패 재시도</button>
+              <button class="ghost-btn danger" id="batchStopBtn" type="button">■ 중단</button>
+              <button class="ghost-btn" id="batchHideBtn" type="button" hidden>닫기</button>
+            </span>
+          </div>
+
+          <footer class="composer">
+            <button class="plus-btn" id="plusBtn" title="가져오기 / 병합">＋</button>
+            <button class="plus-btn" id="queueBtn" title="프롬프트 가져오기 / 슬라이드 JSON 일괄 생성">📋</button>
+            <textarea id="promptInput" rows="1"
+              placeholder="만들고 싶은 이미지를 설명하세요…  (Enter 전송 · Shift+Enter 줄바꿈)"></textarea>
+            <select id="sizeSelect" title="크기/비율"></select>
+            <button class="send-btn" id="sendBtn">생성 ↑</button>
+          </footer>
+        </main>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ── 병합/가져오기 모달 (스튜디오) ───────────────────────────── -->
+<div class="modal" id="mergeModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><h2>＋ 가져오기 / 병합</h2><button class="icon-btn" id="mergeClose">✕</button></div>
+    <p class="hint">스튜디오 이미지를 선택하거나 PC에서 이미지를 추가하고(여러 장 가능), 지시문을 입력하면 한 장으로 합성합니다.</p>
+    <div class="upload-row">
+      <button class="ghost-btn" id="mergeUploadBtn" type="button">📁 PC에서 이미지 추가</button>
+      <input type="file" id="mergeFileInput" accept="image/*" multiple hidden>
+    </div>
+    <div class="picker" id="mergeUploadList" hidden></div>
+    <div class="picker" id="mergePicker"></div>
+    <textarea id="mergePrompt" rows="2" placeholder="예: 두 이미지를 자연스럽게 한 장면으로 합성해줘"></textarea>
+    <div class="modal-foot">
+      <span class="sel-count" id="mergeCount">선택: 0</span>
+      <button class="primary-btn" id="mergeRun">병합 생성</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 엔진 설정 모달 (공유 로그인 상태 + 엔진/크기) ──────────────── -->
+<div class="modal" id="settingsModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><h2>⚙️ 엔진 설정</h2><button class="icon-btn" id="settingsClose">✕</button></div>
+    <div class="auth-status" id="authStatus"></div>
+    <div class="auth-actions">
+      <button class="ghost-btn" id="loginBtn" type="button">🔑 로그인 / 계정 변경</button>
+      <button class="ghost-btn" id="logoutBtn" type="button">로그아웃</button>
+      <button class="ghost-btn" id="authRefreshBtn" type="button">↻ 상태 새로고침</button>
+    </div>
+    <label class="field">기본 크기/비율
+      <select id="defSizeSelect"></select>
+    </label>
+    <div class="modal-foot">
+      <span class="hint" id="settingsMsg"></span>
+      <button class="primary-btn" id="settingsSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 프롬프트 가져오기 모달 (보관함 한 장씩 / 슬라이드 JSON 일괄) ───── -->
+<div class="modal" id="archiveModal" hidden>
+  <div class="modal-box wide">
+    <div class="modal-head"><h2>📋 프롬프트 가져오기</h2><button class="icon-btn" id="archiveModalClose">✕</button></div>
+
+    <nav class="tabbar mini" id="qsrcTabs">
+      <button class="tab active" type="button" data-qsrc="archive">보관함 — 한 장씩</button>
+      <button class="tab" type="button" data-qsrc="json">슬라이드 JSON — 번호대로 일괄 생성</button>
+    </nav>
+
+    <!-- (A) 보관함 → 큐 -->
+    <div class="qsrc-pane" data-qsrc-pane="archive">
+      <p class="hint">빌더에서 저장한 프롬프트를 골라 큐에 담으면, 컷별로 하나씩 입력창에 자동 입력됩니다. (한 번에 여러 장이 아니라 한 장씩 생성)</p>
+      <div class="upload-row">
+        <label class="arch-split"><input type="checkbox" id="archiveSplit" checked /> 컷별 블록으로 분리</label>
+        <button class="ghost-btn" id="archiveReload" type="button">↻ 새로고침</button>
+      </div>
+      <div class="arch-pick-list" id="archivePickList"></div>
+      <div class="modal-foot">
+        <span class="sel-count" id="archivePickCount">선택: 0</span>
+        <button class="primary-btn" id="archiveToQueue">큐에 담기</button>
+      </div>
+    </div>
+
+    <!-- (B) 슬라이드 JSON → 일괄 생성 -->
+    <div class="qsrc-pane hidden" data-qsrc-pane="json">
+      <p class="hint">
+        슬라이드 이미지 프롬프트 JSON(<code>prompts: [{ n, prompt }]</code>)을 넣으면,
+        지정한 폴더에 <b>슬라이드 번호 파일명</b>(<code>003.png</code>)으로 한꺼번에 생성합니다.
+        브라우저를 닫아도 서버에서 계속 진행되고, 이미 있는 번호는 건너뜁니다.
+      </p>
+
+      <div class="dropzone" id="batchDrop">
+        <input type="file" id="batchFile" accept=".json,.txt,application/json" hidden />
+        <p>📄 이미지프롬프트.json 을 끌어다 놓거나
+          <button type="button" id="batchPick" class="btn">파일 선택</button>
+          <button type="button" id="batchPasteToggle" class="link-btn">직접 붙여넣기</button>
+        </p>
+      </div>
+      <div class="paste-wrap hidden" id="batchPasteWrap">
+        <textarea id="batchPaste" rows="4" placeholder='{"deck": "...", "prompts": [{"n": 1, "prompt": "..."}]}'></textarea>
+        <button type="button" class="ghost-btn" id="batchPasteRead">읽기</button>
+      </div>
+      <p class="batch-summary" id="batchSummary"></p>
+
+      <div class="batch-opts">
+        <label class="bo span2">출력 폴더 (파일이 저장될 곳)
+          <span class="bo-row">
+            <input type="text" id="batchDir" placeholder="예: D:\00work\lecture-out-260804\02_교육방법및교육공학\02\05_합치기\assets" />
+            <button type="button" class="ghost-btn" id="batchDirCheck">확인</button>
+            <button type="button" class="ghost-btn" id="batchDirOpen">📁 열기</button>
+          </span>
+        </label>
+        <label class="bo">크기 / 비율
+          <select id="batchSize"></select>
+        </label>
+        <label class="bo">동시 생성
+          <select id="batchWorkers">
+            <option value="1">1장씩 (가장 안전)</option>
+            <option value="2">2장 동시</option>
+            <option value="3" selected>3장 동시 (권장)</option>
+            <option value="4">4장 동시</option>
+            <option value="5">5장 동시</option>
+            <option value="6">6장 동시 (한도 초과 위험)</option>
+          </select>
+        </label>
+        <label class="bo">실패 시 재시도
+          <select id="batchRetries">
+            <option value="0">안 함</option>
+            <option value="1">1회</option>
+            <option value="2" selected>2회</option>
+            <option value="3">3회</option>
+          </select>
+        </label>
+        <label class="bo">파일명
+          <select id="batchNameMode">
+            <option value="num" selected>003.png (번호만)</option>
+            <option value="num_title">003_제목.png (번호+제목)</option>
+          </select>
+        </label>
+        <div class="bo checks span2">
+          <label><input type="checkbox" id="batchSkip" checked /> 이미 있는 번호는 건너뛰기(이어하기)</label>
+          <label><input type="checkbox" id="batchPlaceOnly" /> place=true 슬라이드만</label>
+          <label><input type="checkbox" id="batchGallery" checked /> 스튜디오 갤러리에도 담기</label>
+        </div>
+        <label class="bo span2">번호 범위 (비우면 전체 · 예: 1-10, 15, 20-25)
+          <span class="bo-row">
+            <input type="text" id="batchRange" placeholder="비우면 전체" />
+            <button type="button" class="ghost-btn" id="batchRangeApply">적용</button>
+            <button type="button" class="ghost-btn" id="batchSelectAll">전체 선택</button>
+            <button type="button" class="ghost-btn" id="batchSelectNone">전체 해제</button>
+          </span>
+        </label>
+      </div>
+
+      <div class="batch-list" id="batchList"></div>
+
+      <div class="modal-foot">
+        <span class="sel-count" id="batchCount">선택: 0</span>
+        <button class="primary-btn" id="batchStart">🖼 일괄 생성 시작</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="js/shell.js"></script>
+<script type="module" src="js/app.js"></script>
+<script src="js/builder.js"></script>
+</body>
+</html>

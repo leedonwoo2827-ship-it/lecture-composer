@@ -1,0 +1,45 @@
+{
+  "$설명": "화면 캡처 목록 — 빈 틀. 복사해서 `shots.<사이트>.json` 으로 쓰세요. 채우는 법은 shots.md",
+
+  "base": "",
+  "out": "",
+
+  "viewport": { "width": 1440, "height": 900, "scale": 2 },
+  "settle_ms": 1200,
+  "timeout_ms": 30000,
+  "full_page": true,
+
+  "$login": "셀렉터는 대개 이대로 맞는다. done 은 로그인 뒤 도착하는 주소.",
+  "login": {
+    "path": "/login",
+    "email": "input[type=email]",
+    "password": "input[type=password]",
+    "submit": "button[type=submit]",
+    "done": "**/dashboard**"
+  },
+
+  "$hide": "장마다 걸리적거리는 것. CSS 가 아니라 Playwright 셀렉터다(:has-text 를 쓸 수 있다).",
+  "hide": [],
+
+  "$common": "역할끼리 겹치는 라우트. 처음 만난 역할에서 한 번만 찍혀 공통/ 으로 간다. 역할마다 다르게 보이는 화면(예: /dashboard)을 넣으면 한쪽이 통째로 사라진다.",
+  "common": [],
+
+  "$roles": "역할 하나 = 로그인 하나. shots 의 배열 순서가 곧 파일 번호이므로 사이드바 순서 그대로 넣는다. user 가 없으면 로그인 없이 찍는다(공개 페이지). 비밀번호는 여기 쓰지 않는다 — 옆의 <이름>.local.json.",
+  "roles": [
+    {
+      "id": "public",
+      "label": "비회원(공개)",
+      "shots": [
+        { "slug": "", "label": "", "path": "" }
+      ]
+    },
+    {
+      "id": "member",
+      "label": "",
+      "user": "",
+      "shots": [
+        { "slug": "", "label": "", "path": "", "group": "" }
+      ]
+    }
+  ]
+}

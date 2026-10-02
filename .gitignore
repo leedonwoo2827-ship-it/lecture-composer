@@ -1,0 +1,33 @@
+# 환경
+.venv/
+__pycache__/
+*.pyc
+
+# 렌더 엔진은 engine/backplate 에 소스째 들어 있다. 설치물(venv·node_modules·assets·fonts)은
+# engine/backplate/.gitignore 가 걸러 준다.
+# 엔진이 혼자 돌 때 만드는 기본 작업 폴더(우리는 jobs/<잡>/bp 를 쓴다)
+engine/showcase-out-*/
+
+# 유튜브 로그인 쿠키가 든 Chrome 프로필 — 절대 올리지 않는다
+profiles/
+
+# PC마다 다른 것 (팀원마다 자기 이름·자기 계정)
+local.json
+jobs/*/job.local.json
+jobs/*/state.json
+jobs/*/state.tmp
+
+# 잡(과정)은 올리지 않는다 — 원천·원고·결과물은 이 PC 에만. 일반 예시(jobs/example)만 올린다
+jobs/*
+!jobs/example/
+jobs/example/*
+!jobs/example/job.json
+jobs/_test/
+logs/
+
+
+# 받아 둔 원천 원본 — 올리지 않는다(필요한 것은 기획 화면에서 jobs/<잡>/input/ 으로 복사해 쓴다)
+_context/
+
+# 이 PC 전용 메모(과정·경로) — 올리지 않는다
+docs/_local/

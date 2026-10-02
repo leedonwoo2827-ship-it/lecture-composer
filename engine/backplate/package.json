@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@hyperframes/player": "^0.8.20",
+    "@hyperframes/producer": "^0.8.20",
+    "hyperframes": "^0.8.20",
+    "playwright": "^1.62.1"
+  }
+}

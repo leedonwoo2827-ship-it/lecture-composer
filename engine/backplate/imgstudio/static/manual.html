@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>프롬프트 매뉴얼 · ChatGPT 이미지 스튜디오</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
+    --text:#e7e9ee; --muted:#9aa3b2; --accent:#6c8cff; --accent2:#8a6cff; --ok:#43d39e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.65;}
+  a{color:var(--accent);}
+  .top{position:sticky;top:0;z-index:5;background:rgba(15,17,21,.92);
+    backdrop-filter:blur(6px);border-bottom:1px solid var(--border);padding:18px 32px;}
+  .top h1{margin:0 0 4px;font-size:20px;}
+  .top .tip{font-size:12.5px;color:var(--muted);}
+  .top kbd{background:var(--panel2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 6px;font-size:11px;}
+  .wrap{max-width:1040px;margin:0 auto;padding:8px 32px 80px;}
+
+  /* 빠른 이동 목차 */
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 8px;}
+  .toc a{font-size:12.5px;background:var(--panel);border:1px solid var(--border);
+    border-radius:20px;padding:6px 12px;text-decoration:none;color:var(--muted);}
+  .toc a:hover{color:var(--text);border-color:var(--accent);}
+
+  /* 섹션: 왼쪽 제목 / 오른쪽 설명 */
+  .row{display:grid;grid-template-columns:210px 1fr;gap:28px;
+    border-top:1px solid var(--border);padding:26px 0;}
+  .row .t{position:sticky;top:92px;align-self:start;}
+  .row .t h2{margin:0;font-size:16px;color:var(--accent);}
+  .row .t .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .row .c > :first-child{margin-top:0;}
+  .row .c h3{font-size:14px;margin:16px 0 6px;color:#cfd6e4;}
+  .row p{margin:8px 0;}
+  .row ul{margin:8px 0;padding-left:18px;}
+  .row li{margin:4px 0;}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+    padding:1px 6px;font-size:12.5px;}
+  .ex{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;margin:10px 0;font-size:13px;}
+  .ex .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .good{border-left:3px solid var(--ok);}
+  .bad{border-left:3px solid #ff6b6b;}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--border);
+    border-radius:6px;padding:1px 7px;margin:2px;font-size:12px;}
+  .muted{color:var(--muted);}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>📖 프롬프트 매뉴얼</h1>
+  <div class="tip">한 페이지에 모았습니다 — <kbd>Ctrl</kbd>+<kbd>F</kbd> 로 키워드를 검색하세요. (예: "조명", "로고", "수정")</div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <a href="#howto">바로 쓰는 법</a>
+    <a href="#formula">기본 공식</a>
+    <a href="#subject">주제</a>
+    <a href="#style">스타일</a>
+    <a href="#camera">구도·카메라</a>
+    <a href="#light">조명</a>
+    <a href="#color">색감</a>
+    <a href="#mood">분위기</a>
+    <a href="#quality">품질·디테일</a>
+    <a href="#ratio">비율</a>
+    <a href="#text">글자·로고</a>
+    <a href="#edit">수정(자연어)</a>
+    <a href="#mask">영역(마스크)</a>
+    <a href="#merge">병합·합성</a>
+    <a href="#negative">제외 지시</a>
+    <a href="#examples">예시 비교</a>
+    <a href="#dict">키워드 사전</a>
+    <a href="#faq">FAQ·문제해결</a>
+  </nav>
+
+  <section class="row" id="howto">
+    <div class="t"><h2>바로 쓰는 법</h2><div class="sub">제일 먼저 읽으세요</div></div>
+    <div class="c">
+      <p><b>그냥 한국어 문장으로 자연스럽게 쓰면 됩니다.</b> 아래 요소들을 한 문장에
+      <b>쉼표로 이어 붙이</b>면 끝입니다. 비율만 작성창 옆 드롭다운에서 고르세요.</p>
+
+      <h3>① 빈칸 채우기 틀</h3>
+      <div class="ex"><span class="lbl">틀</span><br>
+        [무엇이] [무엇을 하는], [스타일], [구도], [조명], [색감], [분위기]
+      </div>
+
+      <h3>② 그대로 복붙해서 써보기</h3>
+      <div class="ex good"><span class="lbl">정사각 캐릭터</span><br>
+        주황색 비니를 쓴 작은 로봇 마스코트, 플랫 벡터 일러스트, 정면 클로즈업,
+        민트색 단색 배경, 밝고 귀여운 분위기
+      </div>
+      <div class="ex good"><span class="lbl">사진풍 인물/동물</span><br>
+        창가에 앉아 밖을 보는 회색 줄무늬 고양이, 수채화 스타일, 측면 구도,
+        부드러운 아침 햇살, 파스텔 색감, 아늑한 분위기
+      </div>
+      <div class="ex good"><span class="lbl">로고/글자</span><br>
+        미니멀 커피 브랜드 로고, 텍스트 "DAILY", 둥근 산세리프, 갈색 단색, 흰 배경, 벡터
+      </div>
+      <div class="ex good"><span class="lbl">배너/썸네일(가로)</span><br>
+        노을 지는 도시 스카이라인, 시네마틱, 와이드샷, 골든아워 역광,
+        따뜻한 색감, 드라마틱한 분위기 &nbsp;→ 비율은 1536×1024(3:2)
+      </div>
+
+      <h3>③ 그다음</h3>
+      <ul>
+        <li>작성창에 붙여넣고 <b>Enter</b> (Shift+Enter는 줄바꿈)</li>
+        <li>비율은 옆 드롭다운(<code>1024×1024(1:1)</code> 등)에서 선택</li>
+        <li>결과가 나오면 클릭 → 우측에서 "배경만 노을로 바꿔줘" 식으로 <b>이어서 수정</b></li>
+        <li>몰라도 됩니다 — 일부만 적어도 동작하고, 나머지는 모델이 알아서 채웁니다</li>
+      </ul>
+      <p class="muted">아래 섹션들은 각 칸에 넣을 수 있는 "키워드 모음"입니다. 막히면 골라 쓰세요.</p>
+    </div>
+  </section>
+
+  <section class="row" id="formula">
+    <div class="t"><h2>기본 공식</h2><div class="sub">좋은 프롬프트의 뼈대</div></div>
+    <div class="c">
+      <p>요소를 <b>겹쳐 쌓을수록</b> 의도가 또렷해집니다. 순서는 자유지만 보통 이 흐름이 안전합니다:</p>
+      <p><code>[주제] + [동작/상태] + [스타일] + [구도/카메라] + [조명] + [색감] + [배경] + [분위기] + [품질]</code></p>
+      <div class="ex good"><span class="lbl">예시</span><br>
+        주황색 비니를 쓴 작은 로봇이(주제) 책상에 앉아 손을 흔드는(동작),
+        플랫 벡터 일러스트(스타일), 정면 클로즈업(구도), 부드러운 정면 조명(조명),
+        민트색 배경(배경), 밝고 귀여운 분위기(분위기), 고해상도 깔끔한 라인(품질).
+      </div>
+      <p class="muted">팁: 한 프롬프트에 주제는 1~2개로. 너무 많은 요소를 한 장에 욱여넣으면 뭉개집니다.</p>
+    </div>
+  </section>
+
+  <section class="row" id="subject">
+    <div class="t"><h2>주제</h2><div class="sub">Subject — 무엇을</div></div>
+    <div class="c">
+      <p>가장 먼저, 가장 구체적으로. "강아지"보다 "황금빛 털의 웃는 골든리트리버 강아지"가 낫습니다.</p>
+      <ul>
+        <li>대상의 <b>정체</b>(사람/사물/동물/풍경)와 <b>수</b>를 명시</li>
+        <li>핵심 <b>특징</b> 2~3개(색·재질·복장·표정·자세)</li>
+        <li>대상이 <b>하는 일</b>(앉다·뛰다·들고 있다 등)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="style">
+    <div class="t"><h2>스타일</h2><div class="sub">Style — 어떤 그림체로</div></div>
+    <div class="c">
+      <p>가장 결과를 크게 바꾸는 요소. 한두 개만 골라 명확히.</p>
+      <div>
+        <span class="pill">사진(photorealistic)</span><span class="pill">시네마틱</span>
+        <span class="pill">플랫 벡터</span><span class="pill">3D 렌더(Pixar 풍)</span>
+        <span class="pill">수채화</span><span class="pill">유화</span>
+        <span class="pill">연필 스케치</span><span class="pill">픽셀아트</span>
+        <span class="pill">애니메이션/만화</span><span class="pill">미니멀 라인아트</span>
+        <span class="pill">아이소메트릭</span><span class="pill">로우폴리</span>
+        <span class="pill">콜라주</span><span class="pill">빈티지 포스터</span>
+      </div>
+      <p class="muted">사진풍을 원하면 카메라/렌즈 용어를 더하면 강해집니다(아래 구도·조명 참고).</p>
+    </div>
+  </section>
+
+  <section class="row" id="camera">
+    <div class="t"><h2>구도·카메라</h2><div class="sub">Composition — 어떻게 담을지</div></div>
+    <div class="c">
+      <h3>샷·거리</h3>
+      <div><span class="pill">클로즈업</span><span class="pill">상반신</span>
+        <span class="pill">전신</span><span class="pill">와이드샷</span>
+        <span class="pill">항공뷰(top-down)</span><span class="pill">매크로</span></div>
+      <h3>앵글</h3>
+      <div><span class="pill">정면</span><span class="pill">측면(프로필)</span>
+        <span class="pill">3/4 앵글</span><span class="pill">로우앵글(올려다봄)</span>
+        <span class="pill">하이앵글(내려다봄)</span></div>
+      <h3>렌즈/심도 (사진풍)</h3>
+      <div><span class="pill">35mm</span><span class="pill">85mm 인물</span>
+        <span class="pill">얕은 심도/보케</span><span class="pill">광각</span>
+        <span class="pill">대칭 구도</span><span class="pill">삼분할 구도</span></div>
+    </div>
+  </section>
+
+  <section class="row" id="light">
+    <div class="t"><h2>조명</h2><div class="sub">Lighting — 빛의 성격</div></div>
+    <div class="c">
+      <div><span class="pill">자연광</span><span class="pill">골든아워(노을)</span>
+        <span class="pill">역광(rim light)</span><span class="pill">소프트 스튜디오 조명</span>
+        <span class="pill">하드라이트(강한 그림자)</span><span class="pill">네온</span>
+        <span class="pill">캔들/촛불</span><span class="pill">달빛</span>
+        <span class="pill">실루엣</span><span class="pill">하이키(밝게)</span>
+        <span class="pill">로우키(어둡고 극적)</span></div>
+      <p class="muted">분위기의 80%는 조명이 결정합니다. 막막하면 "부드러운 정면 조명"부터.</p>
+    </div>
+  </section>
+
+  <section class="row" id="color">
+    <div class="t"><h2>색감</h2><div class="sub">Color — 팔레트와 톤</div></div>
+    <div class="c">
+      <ul>
+        <li><b>구체적 색</b>: "민트 그린과 크림색", "버건디 단색 배경"</li>
+        <li><b>톤</b>: 파스텔 / 비비드 / 모노크롬 / 세피아 / 음울한(muted)</li>
+        <li><b>대비</b>: 따뜻한 vs 차가운, 보색 대비</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="mood">
+    <div class="t"><h2>분위기</h2><div class="sub">Mood — 감정·톤</div></div>
+    <div class="c">
+      <div><span class="pill">밝고 경쾌</span><span class="pill">아늑/포근</span>
+        <span class="pill">미래적/SF</span><span class="pill">신비로운</span>
+        <span class="pill">고요한</span><span class="pill">활기찬</span>
+        <span class="pill">드라마틱</span><span class="pill">미니멀·깨끗한</span></div>
+    </div>
+  </section>
+
+  <section class="row" id="quality">
+    <div class="t"><h2>품질·디테일</h2><div class="sub">마무리 키워드</div></div>
+    <div class="c">
+      <div><span class="pill">고해상도</span><span class="pill">선명한 디테일</span>
+        <span class="pill">깔끔한 라인</span><span class="pill">질감 표현</span>
+        <span class="pill">스튜디오 품질</span><span class="pill">제품 사진 같은</span></div>
+      <p class="muted">남용은 금물 — 2~3개면 충분합니다.</p>
+    </div>
+  </section>
+
+  <section class="row" id="ratio">
+    <div class="t"><h2>비율</h2><div class="sub">크기/종횡비 선택</div></div>
+    <div class="c">
+      <p>작성창 하단(또는 설정의 기본값)에서 고릅니다.</p>
+      <table>
+        <tr><th>선택</th><th>비율</th><th>쓰임</th></tr>
+        <tr><td>1024×1024</td><td>1:1 정사각</td><td>프로필, 아이콘, SNS 정방형</td></tr>
+        <tr><td>1536×1024</td><td>3:2 가로</td><td>배너, 썸네일, 풍경</td></tr>
+        <tr><td>1024×1536</td><td>2:3 세로</td><td>포스터, 인물, 모바일 배경</td></tr>
+        <tr><td>1536×864</td><td>16:9 가로</td><td>강의 슬라이드, 유튜브 썸네일</td></tr>
+        <tr><td>864×1536</td><td>9:16 세로</td><td>쇼츠, 릴스, 스토리</td></tr>
+        <tr><td>1408×1056</td><td>4:3 가로</td><td>구형 슬라이드, 사진</td></tr>
+        <tr><td>1056×1408</td><td>3:4 세로</td><td>인물, 카드뉴스</td></tr>
+        <tr><td>1344×576</td><td>21:9 초광각</td><td>배너, 헤더</td></tr>
+        <tr><td>자동</td><td>모델이 선택</td><td>비율을 고민하기 싫을 때</td></tr>
+      </table>
+      <p>목록에 없는 크기도 <b>가로·세로 모두 16의 배수</b>이고 비율이
+        <b>1:3 ~ 3:1</b> 사이면 됩니다(최대 3840×2160).</p>
+      <p><b>실제 픽셀은 조금 달라집니다.</b> 1536×864 를 요청하면 1672×941 이 오는 식으로,
+        모델이 비율은 지키되 해상도는 자기 기준으로 다시 잡습니다. 정확한 픽셀이 필요하면
+        받은 뒤에 맞추세요.</p>
+    </div>
+  </section>
+
+  <section class="row" id="text">
+    <div class="t"><h2>글자·로고</h2><div class="sub">이미지 안에 텍스트 넣기</div></div>
+    <div class="c">
+      <ul>
+        <li>넣을 문구를 <b>따옴표로</b> 정확히: 포스터에 <code>"OPEN TODAY"</code> 라고 적기</li>
+        <li>짧을수록 정확합니다(한 줄 권장). 글꼴 느낌도 지정: "굵은 산세리프", "손글씨체"</li>
+        <li>로고: "심플한 미니멀 로고, 텍스트 'UBION', 둥근 산세리프, 단색 배경"</li>
+        <li>한글 텍스트는 영어보다 깨질 확률이 높습니다 — 중요하면 영문 권장.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="edit">
+    <div class="t"><h2>수정(자연어)</h2><div class="sub">이미지를 골라 말로 고치기</div></div>
+    <div class="c">
+      <p>이미지를 클릭하면 우측 패널에서 자연어로 수정합니다. <b>바꿀 것만</b> 콕 집어 말하세요.</p>
+      <p><b>복붙해서 바로 써보세요</b> (이미지 클릭 → 우측 수정창에 입력 → 적용):</p>
+      <div class="ex good"><span class="lbl">배경 교체</span><br>
+        배경만 노을 지는 해변으로 바꾸고, 인물과 포즈는 그대로 유지해줘
+      </div>
+      <div class="ex good"><span class="lbl">색 변경</span><br>
+        비니 색을 빨간색으로 바꿔줘
+      </div>
+      <div class="ex good"><span class="lbl">요소 추가</span><br>
+        로봇 손에 작은 파란 깃발을 쥐여줘
+      </div>
+      <div class="ex good"><span class="lbl">요소 제거</span><br>
+        왼쪽에 있는 컵을 지워줘
+      </div>
+      <div class="ex good"><span class="lbl">글자 변경</span><br>
+        간판 글자를 "SALE"로 바꾸고 나머지는 그대로
+      </div>
+      <ul>
+        <li><b>"바꿀 것" + "그대로 둘 것"</b>을 함께 적으면 안정적("~만 바꾸고 나머지는 유지")</li>
+        <li>한 번에 하나씩 고치고, 결과를 보고 이어서 수정(버전 히스토리에 계보가 쌓임)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="mask">
+    <div class="t"><h2>영역(마스크)</h2><div class="sub">마우스로 칠한 부분만</div></div>
+    <div class="c">
+      <p>우측 패널의 <b>🖱 영역 칠해서 수정</b>을 켜고 고칠 부분을 칠한 뒤 지시하면, 그 영역 위주로 수정됩니다.</p>
+      <ul>
+        <li>칠한 영역 + 지시문을 함께 전달하므로, "이 부분을 ~로 바꿔" 식으로 적으면 좋습니다</li>
+        <li>전용 마스크가 아니라 <b>강조 영역 힌트</b>라서 100% 픽셀 단위는 아닙니다 — 살짝 넉넉히 칠하세요</li>
+        <li>경계가 중요하면 자연어로 보강: "칠한 영역 안의 간판 글자만 빨간색으로"</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="merge">
+    <div class="t"><h2>병합·합성</h2><div class="sub">＋ 버튼으로 여러 장을 하나로</div></div>
+    <div class="c">
+      <p>작성창의 <b>＋</b>를 눌러 이미지를 여러 장 고르고(최대 16장) 지시문을 적으면 한 장으로 합성합니다.</p>
+      <div class="ex good"><span class="lbl">예시</span><br>
+        첫 번째 이미지의 인물을 두 번째 이미지의 배경(도시 야경) 안에 자연스럽게 합성하고,
+        조명과 그림자를 배경에 맞춰줘.
+      </div>
+      <ul>
+        <li>각 이미지의 <b>역할</b>을 지정: "첫 번째=인물, 두 번째=배경, 세 번째=참고 스타일"</li>
+        <li>스타일 참조용으로도 활용: "이 그림체로 새 장면을 그려줘"</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="row" id="negative">
+    <div class="t"><h2>제외 지시</h2><div class="sub">빼고 싶은 것</div></div>
+    <div class="c">
+      <p>전용 negative 입력란은 없지만, 프롬프트에 자연어로 적으면 됩니다.</p>
+      <div class="ex"><span class="lbl">예</span><br>
+        …, 글자나 워터마크 없이, 사람 없이, 배경은 단색으로 깔끔하게.
+      </div>
+    </div>
+  </section>
+
+  <section class="row" id="examples">
+    <div class="t"><h2>예시 비교</h2><div class="sub">좋은 예 vs 아쉬운 예</div></div>
+    <div class="c">
+      <div class="ex bad"><span class="lbl">아쉬움</span><br> 고양이 그려줘</div>
+      <div class="ex good"><span class="lbl">좋음</span><br>
+        창가에 앉아 밖을 보는 회색 줄무늬 고양이, 수채화 스타일, 측면 구도,
+        부드러운 아침 햇살, 파스텔 색감, 아늑한 분위기, 1:1.
+      </div>
+      <div class="ex bad"><span class="lbl">아쉬움</span><br> 멋진 로고</div>
+      <div class="ex good"><span class="lbl">좋음</span><br>
+        미니멀 커피 브랜드 로고, 텍스트 "DAILY", 둥근 산세리프, 갈색 단색,
+        가운데 정렬, 흰 배경, 벡터, 1:1.
+      </div>
+    </div>
+  </section>
+
+  <section class="row" id="dict">
+    <div class="t"><h2>키워드 사전</h2><div class="sub">한국어 → 영어</div></div>
+    <div class="c">
+      <p class="muted">모델은 영어 키워드에 더 민감할 때가 있습니다. 필요하면 섞어 쓰세요.</p>
+      <table>
+        <tr><th>한국어</th><th>English</th></tr>
+        <tr><td>사진 같은</td><td>photorealistic</td></tr>
+        <tr><td>시네마틱한</td><td>cinematic</td></tr>
+        <tr><td>플랫 벡터</td><td>flat vector illustration</td></tr>
+        <tr><td>3D 렌더</td><td>3D render</td></tr>
+        <tr><td>수채화</td><td>watercolor</td></tr>
+        <tr><td>유화</td><td>oil painting</td></tr>
+        <tr><td>연필 스케치</td><td>pencil sketch</td></tr>
+        <tr><td>클로즈업</td><td>close-up</td></tr>
+        <tr><td>전신</td><td>full body shot</td></tr>
+        <tr><td>항공뷰</td><td>top-down / aerial view</td></tr>
+        <tr><td>로우앵글</td><td>low angle</td></tr>
+        <tr><td>얕은 심도/보케</td><td>shallow depth of field, bokeh</td></tr>
+        <tr><td>골든아워</td><td>golden hour</td></tr>
+        <tr><td>역광</td><td>backlight / rim light</td></tr>
+        <tr><td>스튜디오 조명</td><td>studio lighting</td></tr>
+        <tr><td>파스텔 색감</td><td>pastel colors</td></tr>
+        <tr><td>비비드한</td><td>vibrant</td></tr>
+        <tr><td>모노크롬</td><td>monochrome</td></tr>
+        <tr><td>미니멀한</td><td>minimalist</td></tr>
+        <tr><td>아늑한</td><td>cozy</td></tr>
+        <tr><td>미래적</td><td>futuristic</td></tr>
+        <tr><td>고해상도</td><td>high resolution, highly detailed</td></tr>
+        <tr><td>단색 배경</td><td>solid color background</td></tr>
+        <tr><td>워터마크 없이</td><td>no watermark, no text</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="row" id="faq">
+    <div class="t"><h2>FAQ·문제해결</h2><div class="sub">자주 묻는 것</div></div>
+    <div class="c">
+      <h3>결과가 프롬프트와 달라요</h3>
+      <p>요소가 너무 많거나 모순될 때 그렇습니다. 주제를 1개로 줄이고, 한 번에 하나씩 수정하세요.</p>
+      <h3>글자가 깨져요</h3>
+      <p>문구를 짧게·따옴표로, 가능하면 영문으로. 그래도 틀리면 "수정"으로 글자만 다시 지정.</p>
+      <h3>로그인이 필요하다고 떠요</h3>
+      <p>터미널에서 <code>codex login</code> 후 다시 시도하세요(이 PC에 1회). 토큰 만료 시에도 동일.</p>
+      <h3>생성이 느려요</h3>
+      <p>큰 이미지는 1~3분 걸릴 수 있습니다. 잠시 기다리거나 크기를 줄여보세요.</p>
+      <h3>할당량</h3>
+      <p>ChatGPT 구독 사용량에서 차감됩니다(계정 단위). 여러 PC에서 같은 계정이면 합산됩니다.</p>
+    </div>
+  </section>
+
+  <p class="muted" style="margin-top:40px;font-size:12px;">
+    이 매뉴얼은 기본 가이드입니다. 원하는 PDF/문서를 주시면 이 동일한 형식(왼쪽 제목·오른쪽 설명)으로 교체해 드릴 수 있습니다.
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# 줄바꿈 정책
+#
+# ★ **.bat 은 반드시 CRLF 다.** LF 만 있으면 cmd.exe 가 label/goto 를 잘못 읽는다.
+#   그리고 .bat 안에는 **ASCII 만** 쓴다 — 콘솔 코드페이지가 CP949 일 때 cmd 가
+#   UTF-8 멀티바이트를 명령 구분자로 잘못 읽어 스크립트가 통째로 깨진다
+#   (2026-09-18 실측: "'--upgrade' is not recognized"). 한글 안내는
+#   tools/doctor.py 가 맡는다 — 파이썬은 UTF-8 을 제대로 다룬다.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 나머지는 LF
+*.py   text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.sh   text eol=lf
+
+# 바이너리 — 손대지 않는다
+*.png  binary
+*.jpg  binary
+*.mp4  binary
+*.wav  binary
+*.m4a  binary
+*.onnx binary
+*.woff2 binary
+*.ttf  binary

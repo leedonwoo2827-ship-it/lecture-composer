@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>단행본 장별HTML 트레일러 제작 에이전트</title>
+<meta name="description" content="화면 영상 · 레포 · 라이브 URL 을 넣으면 슬라이드처럼 넘어가는 쇼케이스 한 장이 나오는 로컬 콘솔" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%239a4d33'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='15' font-weight='700' fill='%23ffffff' text-anchor='middle'%3E%EC%87%BC%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+<!-- ══ Layer 0 — 베이스 (좌측 레일 + 작업 본문) ══════════════════════════
+     사내 로컬 콘솔의 UX 법칙을 그대로 따른다: **목록은 패널(위층), 작업은 바탕(아래층).**
+     패널을 열고 닫아도 바탕은 언마운트되지 않는다 — 그래서 긴 스테이지의 SSE 스트림과
+     덱 에디터의 미저장 텍스트가 산다. 미저장 텍스트를 가진 화면은 패널에 두지 않는다. -->
+<div class="app">
+  <nav class="rail" id="rail" aria-label="주 메뉴">
+    <div class="side-brand">
+      <button class="brand-mark" id="brand-mark" type="button" title="메뉴 펼치기">SME 확정전 영상</button>
+      <span class="brand-name">에이전트</span>
+      <button class="rail-toggle" id="rail-toggle" type="button"
+              title="메뉴 접기 (Ctrl+B)" aria-label="메뉴 접기">
+        <span data-icon="panelLeft" data-icon-size="16"></span>
+      </button>
+    </div>
+
+    <!-- ★ 맨 위 큰 단추는 **새로 시작하는 자리**다(2026-08-14 지시).
+         예전에는 「다음 할 일」이 있었는데, 눌러 봐야 현황판으로 갈 뿐이라
+         "다음이 무엇인지 알려 준다" 는 이름값을 못 했다. 무엇이 남았는지는
+         오른쪽 서랍(최근 한 일)이 번호까지 붙여 말해 주므로 그 일이 겹치기도
+         한다. 여기는 **시작**만 맡는다 — 목록의 다른 줄들과 성격이 다르니
+         모양도 다른 게 맞다. -->
+    <button class="btn-new" id="btn-new-deck" type="button"
+            title="새 발표 — 좌표 넣고 설문">
+      <span data-icon="plus" data-icon-size="15"></span>
+      <span>새 발표</span>
+    </button>
+
+    <ul class="side-nav" id="side-nav">
+      <!-- 화면 이름(프레임·대본·영상)은 파이프라인 용어라 버렸다.
+           그 자리에 **유형**이 뜬다 — 유형은 프로젝트마다 다르고, 유형이 곧
+           어느 도구로 갈지 정한다(움직이는 화면 → 영상 편집기, 나머지 → 덱).
+           ★ 「새 발표」 줄은 뺐다 — 바로 위 큰 단추가 같은 곳으로 간다.
+              같은 것이 두 개면 어느 쪽이 진짜인지 매번 생각하게 된다. -->
+      <li><a href="#/board" data-nav="brd" title="현황판 — 무엇이 얼마나 만들어졌나">
+        <span data-icon="layers"></span><span>현황판 <em class="nav-dest">무엇이 남았나</em></span></a></li>
+      <!-- 목차 확인은 유형(문구·이미지·영상)보다 **앞**이다. 여기서 확정한 뒤에
+           비싼 단계가 돈다 — 순서가 곧 규칙이라 메뉴 순서도 그렇게 둔다. -->
+      <li><a href="#/outline" data-nav="otl" title="목차 — 장 순서와 제목을 확정">
+        <span data-icon="list"></span><span>목차 <em class="nav-dest">순서 · 제목 확정</em></span></a></li>
+    </ul>
+
+    <!-- ★ 유형은 **미디어 종류**다(텍스트 / +이미지 / +영상). 주제가 아니다.
+         손이 가는 단위가 거기서 갈리고, 현황판의 확정 단위와 같은 축이다. -->
+    <div class="side-section" id="side-lanes-wrap" hidden>
+      <span class="side-section-title">수정 — 유형</span>
+      <div class="side-lanes" id="side-lanes"></div>
+    </div>
+
+    <!-- 전체는 유형 **아래**다. 유형별로 훑다가 마지막에 1→끝으로 나간다.
+         ★ 번호는 **일곱 단계 중 제 자리**다(3~7). 1·2(이미지 JSON 만들기 ·
+           그림 굽기)는 레일이 아니라 위 「수정 — 유형」의 원고 HTML 화면에서
+           하므로 여기 번호가 없다 — 빠진 것이 아니다.
+         ★ 덱이 ④⑤ 둘을 지는 이유: 대본을 적용하는 일과 음성·자막을 굽는 일이
+           같은 화면에서 일어난다. 화면을 쪼개는 것보다 번호를 겹쳐 두는 쪽이
+           「지금 어디냐」를 덜 헷갈리게 한다. -->
+    <ul class="side-nav side-nav-tail">
+      <!-- ★ 덱 **위**다. 라벨을 맞춘 뒤에 전체를 훑는 순서다. -->
+      <li><a href="#/labels" data-nav="lbl" title="라벨 자리 — 배경판 위의 글을 고치고 옮기기">
+        <b class="nav-no">3.</b><span data-icon="wand"></span><span>라벨 자리 <em class="nav-dest">글 · 자리 맞추기</em></span></a></li>
+      <li><a href="#/deck" data-nav="dck" title="전체 — 슬라이드를 처음부터 끝까지">
+        <b class="nav-no">4·5.</b><span data-icon="slide"></span><span>덱 <em class="nav-dest">대본 적용 · 음성/자막 굽기</em></span></a></li>
+      <!-- ★ 덱 **바로 아래**다. 덱을 다 훑고 나면 남은 일은 하나뿐이다 —
+           mp4 한 편으로 굽는 것. 순서가 곧 메뉴 순서다. -->
+      <!-- ★ 덱(음성) 과 렌더링 **사이**다. 라벨이 뜨는 시각은 실측 음성 길이에서
+           나오므로 음성이 확정돼야 맞출 수 있고, 굽기 전에 맞춰야 한 번에 끝난다. -->
+      <li><a href="#/cues" data-nav="cue" title="말하는 순간 — 라벨이 몇 번째 문장에서 뜰지 맞추기">
+        <b class="nav-no">6.</b><span data-icon="wand"></span><span>말하는 순간 <em class="nav-dest">라벨 차례</em></span></a></li>
+      <li><a href="#/mp4" data-nav="mp4" title="영상 렌더링 — 장마다 찍어 mp4 로 굽기">
+        <b class="nav-no">7.</b><span data-icon="film"></span><span>영상 렌더링 <em class="nav-dest">mp4 굽기</em></span></a></li>
+      <!-- ★ **「모션」을 레일에서 뺐다**(2026-09-18). 전면 판은 «영상 렌더링»
+           한 번이 모션과 −16 LUFS 합본까지 다 한다(`s12h-hyper`) — 메뉴에
+           남겨 두면 "한 번 더 눌러야 하나" 를 매번 묻게 된다.
+           ★ **화면은 안 지웠다.** 액자(옛 프로젝트)는 글자가 그림에 구워져
+           있어 아직 픽셀에서 상자를 되찾는 길을 지나야 한다. 그 보수는
+           주소를 직접 쳐서 간다: #/motion -->
+    </ul>
+
+    <!-- 스테이지 하나가 몇 분씩 간다. 그 화면을 지키고 있을 수 없으니, 어느 화면에
+         있어도 여기서 보인다. 돌고 있지 않으면 통째로 숨는다. -->
+    <a class="render-bar" id="render-bar" href="#/board" hidden>
+      <span class="render-bar-top">
+        <span id="render-bar-title">스테이지</span>
+        <span class="render-bar-pct" id="render-bar-pct"></span>
+      </span>
+      <span class="render-bar-track"><span class="render-bar-fill" id="render-bar-fill"></span></span>
+      <span class="render-bar-msg" id="render-bar-msg"></span>
+    </a>
+
+    <div class="side-section">
+      <span class="side-section-title" id="side-section-title">최근 프로젝트</span>
+      <button class="side-section-more" id="side-section-more" type="button"
+              data-go="/projects">전체</button>
+    </div>
+    <div class="side-recent" id="side-recent">
+      <div class="side-empty">아직 프로젝트가 없습니다.</div>
+    </div>
+
+    <div class="rail-wrap">
+      <!-- 좌하단 칩 = 워크스페이스. 프로젝트 전환 · 산출물 폴더 · 연결 설정이 여기로. -->
+      <button class="side-user" id="side-user" type="button"
+              aria-haspopup="dialog" aria-expanded="false"
+              title="워크스페이스 — 프로젝트 · 산출물 폴더 · 연결 설정">
+        <span class="su-avatar" id="su-avatar">SA</span>
+        <span class="su-text">
+          <span class="su-name" id="su-name">프로젝트를 고르세요</span>
+          <span class="su-team" id="su-team">—</span>
+        </span>
+        <span data-icon="chevronUp" data-icon-size="14"></span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="content" id="view" tabindex="-1"></main>
+
+  <!-- ══ 오른쪽 서랍 — 최근 한 일 ═══════════════════════════════════════════
+       ★ 왼쪽이 아니라 오른쪽인 이유: 왼쪽 레일은 **어디로 갈까**(목록)이고
+         이것은 **무엇을 했나**(이력)다. 성격이 달라서 같은 자리에 섞으면 둘 다
+         안 읽힌다(2026-08-14 지시: "좌측은 목록이 있어서 그 위치가 아닌 것 같다").
+       ★ 덱 화면만이 아니라 **전체 공통**이다 — 어느 화면에 있든 "방금 무엇을
+         눌렀나 · 무엇을 다시 해야 하나" 는 같은 질문이다.
+       ★ 접힌 상태가 기본이다. 늘 펴져 있으면 작업 폭을 상시로 먹는다. -->
+  <aside class="log-rail" id="log-rail" data-open="0" aria-label="최근 한 일">
+    <button class="log-tab" id="log-tab" type="button"
+            title="최근 한 일 (Ctrl+J)" aria-expanded="false">
+      <span data-icon="clock" data-icon-size="15"></span>
+      <span class="log-tab-t">최근 한 일</span>
+      <span class="log-tab-dot" id="log-tab-dot" hidden></span>
+    </button>
+    <div class="log-body" id="log-body"></div>
+  </aside>
+</div>
+
+<!-- ══ Layer 1 — 부유 패널 (목록 = 고르는 곳). panel.js 가 만든다. ══════════ -->
+<div class="panel-layer" id="panel-layer" hidden></div>
+
+<!-- ══ Layer 2 — 토스트 ═══════════════════════════════════════════════════ -->
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/static/js/shell.js"></script>
+</body>
+</html>

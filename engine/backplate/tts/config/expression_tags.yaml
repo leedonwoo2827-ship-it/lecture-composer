@@ -1,0 +1,29 @@
+# Supertonic 3 표현 태그 - 청취 검증 기록
+#
+# 공식 README는 태그가 10개라고만 하고 3개(<laugh> <breath> <sigh>)만 이름을
+# 밝혔습니다. 나머지 7개는 서드파티 통합 문서에서 가져온 것이라 공식 확인이
+# 아닙니다. 그래서 앱의 "표현 태그 실험실"에서 직접 들어보고 결과를 여기에
+# 기록합니다.
+#
+#   audible  - 확실히 들린다
+#   silence  - 짧은 정적만 삽입된다
+#   none     - 아무 효과 없다 (글자로 읽히거나 무시)
+#   unknown  - 아직 안 들어봤다
+#
+# 아래 값은 문서에 근거한 초기 추정입니다. 길이 A/B 측정 결과는
+# docs/expression-tags.md 에 따로 적어두었습니다 - 측정은 "무언가 생겼다"까지만
+# 말해주므로, 여기 값은 실제로 귀로 들어본 뒤에 바꾸세요.
+#
+# 이 파일을 지우면 코드에 들어있는 기본 추정값으로 돌아갑니다.
+
+verified:
+  "<laugh>": audible
+  "<breath>": silence
+  "<sigh>": silence
+  "<surprise>": unknown
+  "<scream>": unknown
+  "<throatclear>": unknown
+  "<sad>": unknown
+  "<angry>": unknown
+  "<cough>": unknown
+  "<yawn>": unknown

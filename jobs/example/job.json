@@ -1,0 +1,106 @@
+{
+  "title": "예시 과정 이론 강의",
+  "book": "예시 과정",
+  "pd": "example",
+  "source": {
+    "_note": "파일은 웹앱 「기획」 화면의 ② 원천 파일(또는 가져올 폴더)로 input/ 에 넣는다",
+    "notes_dir": "",
+    "rounds_dir": "",
+    "scripts_dir": ""
+  },
+  "inputs": {
+    "notes": [],
+    "scripts": [],
+    "rounds_dir": "jobs/example/input/rounds"
+  },
+  "curriculum": {
+    "lectures_per_subject": {},
+    "target_min": 35,
+    "fixed_sec": 180,
+    "examples_per_lecture": 10,
+    "chars_per_sec": 5.5
+  },
+  "manuscript": {
+    "figs_per_lecture": 4,
+    "_figs_per_lecture": "강당 도식 목표. 노트 도식이 모자란 섹션은 Claude 가 노트 내용으로 개념 SVG 를 새로 그린다(3과목 보충용)"
+  },
+  "enrich": {
+    "web": false,
+    "max_searches": 3,
+    "focus": "최신 실무 사례, 시험 출제 경향, 개념을 이해시키는 친숙한 비유",
+    "_web": "true 면 원고 단계에서 Claude 가 웹 검색으로 보충한다. 노트·기존 내레이션이 우선, 정의·공식은 안 바꿈, 출처는 원고 JSON sources 에 남김"
+  },
+  "book_export": {
+    "style": "prose",
+    "title": "",
+    "_style": "prose = 집필 에이전트가 강의체를 문어체로 옮김(섹션당 1회) | lecture = 내레이션 그대로(무료, 강의록)",
+    "epub": false,
+    "_outputs": "out/book/<잡>.html(원본, 도식 SVG 포함) · <잡>.md + img/*.png(HWPX 변환용) · epub=true 면 <잡>.epub"
+  },
+  "llm": {
+    "cli": "claude",
+    "model": "claude-opus-5-5",
+    "timeout_sec": 900,
+    "limit_wait_hours": 24,
+    "_limit": "Claude 사용 한도(5시간 창)에 걸리면 재설정 시각까지 기다렸다 이어서 한다(최대 limit_wait_hours)"
+  },
+  "backplate": {
+    "dir": "engine/backplate",
+    "workspace": "jobs/example/bp",
+    "voice": "F2",
+    "speed": 1.05,
+    "image_mode": "section",
+    "bg_per_section": 3,
+    "_image_mode": "backplate = 엔진 방식 그대로(장마다 Claude 가 장면·라벨 설계 → codex, 약 1,050장) | section = 섹션마다 bg_per_section장(3이면 20강 약 150장) | shared = 소주제마다 1장(약 300장) | per-slide = 슬라이드마다(약 1,050장) | none = 생성 안 함(아이보리 판 + 도식 + 라벨)"
+  },
+  "youtube": {
+    "handle": "@your-channel",
+    "channel_id": "",
+    "visibility": "UNLISTED",
+    "playlist": "예시 과정 이론 강의",
+    "made_for_kids": false,
+    "chrome": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "profile": "profiles/example",
+    "cdp_port": 9333,
+    "max_per_run": 10,
+    "site_url": "",
+    "tags": [
+      "예시과정",
+      "자격증",
+      "이론강의"
+    ]
+  },
+  "register": {
+    "_note": "등록 결과는 out/register/ 에 만든다. 리뷰 페이지를 넣고 탭 키를 적으면 그 탭에 강 목록이 들어간다",
+    "review_html": "",
+    "review_tab": "",
+    "youtube_map_base": "",
+    "pd": "example",
+    "site_url_template": "",
+    "_site_url_template": "예: https://(문제집 사이트)/detail.html?pd={pd} — 책 폴더를 가져올 때 설명란 링크를 만든다"
+  },
+  "accounts": {
+    "codex_failover": true,
+    "_note": "codex 계정 칸은 웹앱 「계정·로그인」 탭(이 PC 의 profiles/codex/). 한도에 걸리면 다음 칸으로 넘어가 남은 그림을 굽는다",
+    "codex_wait_hours": 0,
+    "_codex_wait": "codex 가 그림을 못 그리면 작업을 멈춘다(아이보리 판으로 넘어가지 않음). 0 = 바로 멈춤, N = 한도면 1시간마다 다시 시도하며 N시간까지 기다린 뒤 멈춤"
+  },
+  "subtitles": {
+    "burn_in": false,
+    "font": "Malgun Gothic",
+    "size": 13,
+    "margin_v": 14,
+    "border_style": 3,
+    "crf": 20,
+    "_note": "자막은 out/Lxx/Lxx.srt 를 Lxx.mp4 와 함께 올려 플레이어가 하단에 띄운다. reserve_bottom=true 면 렌더가 화면 아래 14% 를 비워 라벨·도식·문제 카드와 겹치지 않게 한다. burn_in=true 는 영상에 직접 굽는 경우(지금은 쓰지 않음)",
+    "reserve_bottom": true
+  },
+  "course": {
+    "role": "예시 과정 자격증",
+    "short": "예시",
+    "exam": "예시 시험",
+    "series": "예시 2027",
+    "full": "예시 과정 이론 강의",
+    "_note": "과정 이름들 — 집필 지시문·여는 말·유튜브 제목/설명/썸네일에 쓰인다"
+  }
+}

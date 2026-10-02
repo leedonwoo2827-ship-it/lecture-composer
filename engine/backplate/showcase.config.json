@@ -1,0 +1,89 @@
+{
+  "port": 5178,
+  "auth": "claude-code",
+  "vision_mode": "inline",
+  "models": {
+    "caption": "claude-sonnet-5",
+    "link": "claude-sonnet-5",
+    "decisions": "claude-opus-5",
+    "script": "claude-opus-5",
+    "theme": "claude-opus-5",
+    "imgprompt": "claude-opus-5"
+  },
+  "effort": {
+    "caption": "medium",
+    "link": "medium",
+    "decisions": "high",
+    "script": "high",
+    "theme": "medium",
+    "imgprompt": "medium"
+  },
+  "budget_usd": {
+    "per_stage": 1.5,
+    "warn_total": 5.0
+  },
+  "frames": {
+    "min_gap_sec": 1.5,
+    "max_frames": 12,
+    "display_width": 1600,
+    "vision_width": 1024,
+    "sample_fps": 4
+  },
+  "narration": {
+    "chars_per_sec": 3.0,
+    "voice": "F2",
+    "speed": 1.0,
+    "total_step": 8
+  },
+  "tts": {
+    "engine": "none",
+    "python": null,
+    "voicewright_dir": null,
+    "assets_dir": null,
+    "timeout_ms": 300000
+  },
+  "render": {
+    "seed_hex": "#9a4d33",
+    "max_single_file_mb": 10,
+    "single_file_audio": "opus32"
+  },
+  "capture": {
+    "mode": "html",
+    "fig_sec": 3.0
+  },
+  "image": {
+    "aspect": "landscape",
+    "accent_a": "#1F4E79",
+    "accent_b": "#9DC3E6",
+    "negative": "dark background, black background, night scene, dark panel, vignette, dark vignette, darkened edges, dark corners, dark gradient, glow, bloom, neon glow, backlit, spotlight on dark, inverted color scheme, light text on dark background, low contrast text, watermark, logo, low quality, distorted, extra limbs",
+    "swap": false,
+    "bg": "#F6F1E8"
+  },
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "vcodec": "libx264",
+    "crf": 20,
+    "preset": "medium",
+    "profile": "high",
+    "level": "4.0",
+    "acodec": "aac",
+    "abitrate": "192k",
+    "ar": 48000,
+    "ac": 2,
+    "loudnorm": {
+      "i": -16.0,
+      "tp": -1.5,
+      "lra": 11.0
+    }
+  },
+  "subtitle": {
+    "max_lines": 2,
+    "max_chars": 42,
+    "cps": 14.0,
+    "min_sec": 1.5,
+    "max_sec": 7.0,
+    "burn_in": false
+  }
+}

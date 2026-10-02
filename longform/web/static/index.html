@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lecture Composer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+:root{--bg:#F6F1E8;--card:#fff;--ink:#1d2433;--sub:#64748b;--line:#e5ded2;--pri:#1F4E79;--pri2:#9DC3E6;--ok:#0f766e;--warn:#b45309;--bad:#b91c1c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif;font-size:14px}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--pri);color:#fff;position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:-.02em}header .sub{opacity:.75;font-size:12px}
+header select,header button{font:inherit}
+.tabs{display:flex;gap:4px;margin-left:auto}.tabs button{background:transparent;border:0;color:#cfe0f0;padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+.tabs button.on{background:#fff;color:var(--pri)}
+main{padding:18px 20px 220px;max-width:1500px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button.b{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;cursor:pointer;font:inherit;font-weight:600;color:var(--ink)}
+button.b:hover{border-color:var(--pri2)}button.p{background:var(--pri);color:#fff;border-color:var(--pri)}
+button.d{color:var(--bad)}button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
+label.opt{display:flex;gap:5px;align-items:center;color:var(--sub)}
+.stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.stage{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fffdf9}
+.stage .t{font-weight:800}.stage .t small{color:var(--sub);font-weight:600;margin-left:4px}
+.stage p{margin:6px 0 8px;color:var(--sub);font-size:12.5px;line-height:1.45}
+.stage .io{font-size:11.5px;color:#7c6f5a;margin-bottom:8px}
+table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--sub);font-weight:700;background:#fbf8f2;position:sticky;top:52px}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#eef2f6;color:#475569}
+.pill.ok{background:#dcf2ee;color:var(--ok)}.pill.part{background:#fff3d6;color:var(--warn)}.pill.no{background:#f1f5f9;color:#94a3b8}
+.subj1{border-left:4px solid #1F4E79}.subj2{border-left:4px solid #0f766e}.subj3{border-left:4px solid #9a4d33}
+.mini{font-size:12px;color:var(--sub)}a{color:var(--pri)}
+#logbox{position:fixed;left:0;right:0;bottom:0;height:200px;background:#0f172a;color:#d1fae5;font:12px/1.5 Consolas,monospace;
+  padding:8px 14px;overflow:auto;white-space:pre-wrap;border-top:3px solid var(--pri);z-index:6}
+#logbar{position:fixed;right:16px;bottom:206px;z-index:7;display:flex;gap:6px;align-items:center}
+#runstate{background:#0f172a;color:#fff;border-radius:8px;padding:4px 10px;font-size:12px}
+.split{display:grid;grid-template-columns:340px 1fr;gap:14px}
+.list .it{padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
+.list .it.on{border-color:var(--pri);box-shadow:0 0 0 2px #dbe8f5}
+iframe{width:100%;height:640px;border:1px solid var(--line);border-radius:10px;background:#fff}
+video{width:100%;border-radius:10px;background:#000}
+textarea.code{width:100%;height:560px;font:12.5px/1.5 Consolas,monospace}
+.hide{display:none}.warn{color:var(--warn)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 10px;align-items:center}
+td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{white-space:nowrap}th{white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Lecture Composer <span class="sub">강의 편성 엔진</span></h1></div>
+  <select id="job"></select>
+  <span class="sub" id="jobinfo"></span>
+  <nav class="tabs">
+    <button data-tab="dash" class="on">대시보드</button>
+    <button data-tab="view">원고·결과 보기</button>
+    <button data-tab="goal">목표서</button>
+    <button data-tab="newjob">기획(새 IP·강 수)</button>
+    <button data-tab="acct">계정·로그인</button>
+  </nav>
+</header>
+
+<main>
+<!-- ── 대시보드 ─────────────────────────────────────────── -->
+<section id="tab-dash">
+  <div class="card">
+    <h2>실행 옵션 <span class="mini">— 아래 단계 버튼에 같이 적용됩니다</span></h2>
+    <div class="row">
+      <label class="opt">강 <input id="o-only" placeholder="비우면 전체 · 예: L01,L02" size="22"></label>
+      <label class="opt" title="강 하나는 섹션(요약노트 큰 제목) 2~5개로 되어 있습니다. 1 을 넣으면 첫 섹션(영상 약 10분)만 만들어 빨리 확인합니다. 비우면 강 전체.">앞 섹션만(시험) <input id="o-sections" type="number" min="1" placeholder="비우면 강 전체" style="width:120px"></label>
+      <label class="opt"><input id="o-force" type="checkbox"> 다시 만들기(--force)</label>
+      <label class="opt"><input id="o-dry" type="checkbox"> 게시 dry-run(저장 직전 멈춤)</label>
+      <label class="opt"><input id="o-mine" type="checkbox"> 내 담당만 보기</label>
+      <label class="opt">게시 최대 <input id="o-max" type="number" min="1" style="width:70px" placeholder="10"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>단계 — 하나씩 점검하며 실행</h2>
+    <div class="stages" id="stages"></div>
+  </div>
+
+  <div class="card">
+    <h2>강별 진행 <span class="mini" id="sum"></span></h2>
+    <table><thead><tr>
+      <th>강</th><th>담당</th><th>제목</th><th class="num">확장비</th><th class="num">예시</th><th>집필</th><th>렌더</th><th>완성</th><th>게시</th><th>이 강만</th>
+    </tr></thead><tbody id="rows"></tbody></table>
+  </div>
+</section>
+
+<!-- ── 계정·로그인 ─────────────────────────────────────── -->
+<section id="tab-acct" class="hide">
+  <div class="card">
+    <h2>이 PC 를 쓰는 사람 <span class="mini">— 팀원마다 자기 PC·자기 유료 계정으로 씁니다. 로그인 토큰은 이 PC 의 profiles/ 에만 있고 깃에 올라가지 않습니다.</span></h2>
+    <div class="row"><label class="opt">내 이름 <input id="a-me" placeholder="예: 홍길동" size="16"></label><button class="b p" id="a-me-save">저장</button>
+      <span class="mini">강 「맡기」와 진행 기록에 이 이름이 남습니다(local.json).</span><button class="b" id="a-refresh" style="margin-left:auto">새로고침</button></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Claude <span class="mini">— 집필 · 이미지 설계(s3a) · 문체 변환</span></h2>
+      <div class="kv" id="a-claude"></div>
+      <div class="row" style="margin-top:10px"><button class="b p" id="a-claude-open">로그인·계정 바꾸기 / 사용량 창 열기</button></div>
+      <p class="mini">새 창의 claude 에서 <code>/login</code> 으로 계정을 바꾸고, <code>/usage</code> 로 남은 사용량을 봅니다. API 키는 쓰지 않습니다(구독 로그인).</p>
+    </div>
+    <div class="card">
+      <h2>YouTube <span class="mini">— 게시(publish)</span></h2>
+      <div class="kv" id="a-yt"></div>
+      <div class="row" style="margin-top:10px"><button class="b p" id="a-yt-login">채널 계정 로그인(전용 Chrome 열기)</button></div>
+      <p class="mini">열린 Chrome 에서 채널 관리 권한이 있는 구글 계정으로 로그인하고 Studio 가 보이면 창을 닫으십시오. 15분 넘는 영상·맞춤 썸네일은 채널 <b>전화 인증</b>이 필요합니다.
+        팀원은 각자 자기 구글 계정(채널 관리자 권한)으로 로그인합니다.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>codex 계정 칸 <span class="mini">— 배경 그림(s3c). 칸마다 따로 로그인해 두고 골라 씁니다. 한도에 걸리면 다음 칸으로 자동 전환해 남은 그림을 굽습니다.</span></h2>
+    <table><thead><tr><th>쓰는 중</th><th>칸</th><th>계정</th><th>마지막 갱신</th><th class="num">오늘 구움</th><th class="num">누적</th><th class="num">실패</th><th class="num">한도</th><th></th></tr></thead><tbody id="a-codex"></tbody></table>
+    <div class="row" style="margin-top:10px"><label class="opt">새 칸 이름 <input id="a-slot" placeholder="예: main / sub / 팀원이름" size="16"></label>
+      <button class="b p" id="a-slot-login">칸 만들고 로그인</button><button class="b" id="a-slot-copy">이 PC 의 기본 로그인을 이 칸으로 저장</button><span class="mini" id="a-msg"></span></div>
+    <p class="mini">로그인은 새 창에서 <code>codex login</code> 이 열립니다(브라우저에서 ChatGPT 로그인 → 끝나면 「새로고침」). 「로그인됨」이어도 세션이 죽어 있을 수 있습니다 —
+      그때 그림이 token_revoked 로 한꺼번에 실패하면 그 칸을 다시 로그인하십시오. 사용량은 이 PC 에서 구운 장수를 칸별로 센 것입니다(logs/usage.jsonl).</p>
+  </div>
+</section>
+
+<!-- ── 원고·결과 보기 ───────────────────────────────────── -->
+<section id="tab-view" class="hide">
+  <div class="split">
+    <div>
+      <div class="card"><h2>강</h2><select id="v-lec" style="width:100%"></select>
+        <div id="v-meta" class="mini" style="margin-top:8px"></div></div>
+      <div class="card list" id="v-secs"></div>
+    </div>
+    <div>
+      <div class="card" id="v-video"></div>
+      <div class="card"><h2 id="v-title">원고 미리보기</h2><iframe id="v-frame"></iframe></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 목표서 ───────────────────────────────────────────── -->
+<section id="tab-goal" class="hide">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <select id="g-which"><option value="job">목표서 job.json</option><option value="local">이 PC 덮어쓰기 job.local.json</option><option value="curriculum">편성표 curriculum.json</option></select>
+        <button class="b" id="g-load">불러오기</button>
+      </div>
+      <div class="row"><span class="mini" id="g-msg"></span><button class="b p" id="g-save">저장(검증 후)</button></div>
+    </div>
+    <p class="mini">목표서: 강 수(curriculum.lectures_per_subject) · 강 길이(target_min) · 그림(backplate.image_mode) · 보강(enrich.web) · 채널·공개 범위(youtube) · 책 문체(book_export).
+      편성표는 plan 결과입니다 — 섹션 경계를 옮겨 저장하면 그대로 씁니다(plan 을 다시 돌리지 마십시오).</p>
+    <textarea id="g-text" class="code" spellcheck="false"></textarea>
+  </div>
+</section>
+
+<!-- ── 새 IP ────────────────────────────────────────────── -->
+<section id="tab-newjob" class="hide">
+  <div class="card">
+    <h2>① 새 IP(잡) 만들기</h2>
+    <p class="mini">지금 잡의 목표서를 본으로 <b>빈 잡</b>을 만듭니다. 가져올 폴더를 적거나, 아래 ② 칸에 파일을 끌어다 놓으면 됩니다.
+      결과물은 따로 폴더가 생기지 않고 <code>jobs/&lt;잡 이름&gt;/</code> 안에 모두 모입니다(input · manuscripts · out · meta).</p>
+    <div class="kv">
+      <span>잡 이름(영문)</span><input id="n-name" placeholder="예: course-a-26 (영문 · 폴더 이름이 됩니다)">
+      <span>제목</span><input id="n-title" placeholder="예: ○○ 자격증 2027 이론 강의">
+      <span>책/과정 이름</span><input id="n-book" placeholder="예: SQL 개발자">
+      <span>강 길이(분)</span><input id="n-min" type="number" value="35" style="width:90px">
+      <span>재생목록</span><input id="n-playlist" placeholder="비우면 제목">
+      <span>설명란 링크(선택)</span><input id="n-site" placeholder="예: https://(문제집 사이트)/detail.html?pd=…">
+      <span>가져올 폴더(선택)</span><input id="n-import" placeholder="예: _context\과정이름  또는  D:\자료\과정이름 — 안의 html·mNN.json 을 input/ 으로 복사(종류 자동 판별)">
+    </div>
+    <div class="row" style="margin-top:12px"><button class="b p" id="n-make">잡 만들기 (폴더를 적었으면 가져와서 후보까지 계산)</button><span class="mini" id="n-msg"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>② 원천 파일 <span class="mini">— 파일을 칸에 끌어다 놓거나 칸을 눌러 고르십시오. 잡 폴더 <code id="src-dir"></code> 안에 저장되고 목표서에 바로 반영됩니다.</span></h2>
+    <p class="mini">순서가 중요합니다. 요약노트와 영상 원고는 <b>파일 이름순</b>으로 1·2·3부가 됩니다(「N과목」이 있으면 그 번호). 두 칸의 파일 이름 앞에 <code>01-</code> <code>02-</code>를 붙여 순서를 맞추십시오.
+      파일을 넣거나 빼면 아래 <b>④ 후보표가 자동으로 다시 계산</b>됩니다(편성은 강 수를 정한 뒤).</p>
+    <div class="row" style="margin:6px 0 12px"><span class="mini">또는 폴더에서 한 번에 가져오기:</span><button class="b" data-open="input">input 폴더 열기</button><button class="b" data-open="job">잡 폴더 열기</button><input id="src-import" size="40" placeholder="_context\과정이름  또는  D:\자료\과정이름"><button class="b p" id="src-import-go">가져오기(복사)</button><span class="mini" id="src-import-msg"></span></div>
+    <div class="grid2" id="drops"></div>
+  </div>
+
+
+  <div class="grid2">
+    <div class="card">
+      <h2>③ Claude Code 에 할 말 <span class="mini">— 추천 1번 프롬프트</span></h2>
+      <p class="mini"><b>지금 Claude Code 에 이렇게 말하십시오</b> — 아래 문장을 그대로 복사해 VSCode 의 Claude Code 에 붙여 넣습니다.
+        기준은 <b>시장조사가 1순위, 확장비는 참고만</b>입니다. Claude 가 경쟁 인강을 조사해 제1 권고안을 내고, 좋다고 하면 <code>run.bat decide</code> 로 목표서와 기획 메모에 적습니다. 끝나면 「다시 불러오기」.
+        (같은 규칙이 레포의 <code>CLAUDE.md</code> 에 적혀 있습니다.)</p>
+      <textarea id="p-prompt" class="code" style="height:170px"></textarea>
+      <div class="row" style="margin-top:6px"><button class="b p" id="p-copy">복사</button><button class="b" id="p-reset">추천 문장으로 되돌리기</button><button class="b" id="p-reload">다시 불러오기</button></div>
+    </div>
+    <div class="card">
+      <h2>기획 메모 <span class="mini">brief.md — 정한 것과 이유</span></h2>
+      <pre id="p-brief" style="white-space:pre-wrap;font:12.5px/1.6 inherit;max-height:340px;overflow:auto;margin:0"></pre>
+    </div>
+  </div>
+  <div class="card">
+    <h2>④ 강 수 후보표 <span class="mini" id="p-job"></span> <span class="mini">— 대화 없이 화면에서 고를 때</span></h2>
+    <p class="mini">강 수는 정답이 없는 결정이라 <b>코드는 후보와 근거만</b> 냅니다. 고르는 것은 사람(그리고 Claude Code 와의 대화)입니다.
+      확장비 = 목표 개념 분량 ÷ 기존 내레이션 — <b>1.0~1.4 가 가장 좋고</b>, 0.9 미만은 줄여야 하며(강이 길어짐), 2.0 초과는 지어낼 몫이 큽니다.</p>
+    <div class="row"><button class="b p" id="p-calc">후보 계산</button><span class="mini" id="p-cur"></span></div>
+    <div id="p-weights" class="mini" style="margin:10px 0"></div>
+    <table><thead><tr><th>#</th><th>배분</th><th>강 × 길이</th><th>근거</th><th class="num">확장비(평균)</th><th class="num">2배 초과</th><th class="num">0.9 미만</th><th class="num">예시</th><th></th></tr></thead>
+      <tbody id="p-rows"></tbody></table>
+    <div class="row" style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)"><b>직접 정하기</b><span class="mini">(대화에서 나온 시장조사 권고안을 그대로 적을 때)</span><label class="opt">과목별 강 수 <input id="p-per" placeholder="예: 4,18  또는  12,12,12,12" size="20"></label><label class="opt">강 길이(분) <input id="p-target" type="number" value="35" style="width:70px"></label><label class="opt">이유 <input id="p-note" size="34" placeholder="예: 시장 중앙값 약 13시간, 출제 10:40"></label><button class="b p" id="p-manual">이걸로 정하기</button></div>
+  </div>
+
+</section>
+</main>
+
+<div id="logbar"><span id="runstate">대기</span><button class="b d" id="stop">중지</button><button class="b" id="clear">지우기</button></div>
+<div id="logbox"></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+let JOB = "", ST = null, logOff = 0, ME = "";
+
+const STAGES = [
+  {k:"pack",    n:"원천 모으기", d:"요약노트·영상 원고·문항을 잡 폴더 input/ 으로 복사합니다(원천이 있는 PC에서).", io:"source.* → input/"},
+  {k:"plan",    n:"1 편성",     d:"목표서대로 강을 나누고 예시 문항을 고릅니다. 확장비 3.5배 초과는 ⚠. 다시 하려면 --force(손편집 덮음).", io:"input/ → curriculum.json", force:true},
+  {k:"examples",n:"문항 반영",  d:"문항(mNN.json)이 나중에 들어오거나 바뀌었을 때. 강 나누기는 그대로 두고 예시만 다시 고릅니다. 이어서 집필(저장된 집필 재사용 — Claude 를 다시 부르지 않음) → 렌더.", io:"input/rounds → curriculum.json(examples)"},
+  {k:"compose", n:"2 집필",     d:"집필 에이전트(Claude)가 섹션마다 목표 분량으로 원고를 씁니다. 자막·발음·여는/닫는 말·도식.", io:"편성표 + input/ → manuscripts/"},
+  {k:"render",  n:"3 렌더",     d:"backplate-studio 로 섹션 mp4. 자막·발음을 덮어쓰기로 확정, 배경(codex)·도식 PNG.", io:"manuscripts/ → out/Lxx/parts/"},
+  {k:"stitch",  n:"4 잇기",     d:"섹션을 무손실로 잇고 −16 LUFS, 챕터, 합본 자막.", io:"parts/ → out/Lxx/Lxx.mp4"},
+  {k:"meta",    n:"5 메타",     d:"유튜브 제목·설명·태그·챕터 + 썸네일.", io:"→ meta/Lxx.json, .thumb.png"},
+  {k:"login",   n:"로그인",     d:"전용 Chrome 프로필로 채널 계정 로그인(처음 한 번). 로그인 후 창을 닫으십시오.", io:"→ profiles/"},
+  {k:"publish", n:"6 게시",     d:"YouTube Studio 자동 업로드(일부공개·재생목록). dry-run 이면 저장 직전 멈춤.", io:"meta/ → out/youtube_ids.json"},
+  {k:"register",n:"7 등록",     d:"사이트 youtube_map · review.html · statements.jsonl. 경로가 없는 PC 에선 건너뜀.", io:"youtube_ids → 사이트·리뷰"},
+  {k:"textbook",n:"8 교재(종합본)", d:"이 강의의 교재 원고를 새로 씁니다(요약노트=사실, 강의 원고=설명 흐름). 과목마다 요약노트와 같은 형식의 HTML — 요약노트 HWPX 변환에 그대로 넣습니다.", io:"input + manuscripts/ → textbook/ · out/textbook/NN-textbook-*.html (+ .md·PNG)"},
+  {k:"make",    n:"제작(무인) 2→4 + 교재", d:"강마다 집필 → 렌더 → 잇기, 끝나면 교재(종합본 HTML). 메타·게시·등록은 하지 않습니다. 한 강이 실패해도 다음 강으로 넘어가고 끝에 강별 결과를 정리합니다 — 퇴근 후 돌리기용.", io:"→ out/Lxx/Lxx.mp4 · .srt · out/textbook/"},
+  {k:"all",     n:"전체 1→7",   d:"끝난 단계는 건너뛰고 이어서. 강·섹션 옵션이 적용됩니다.", io:""},
+];
+
+async function api(p, o={}) { const r = await fetch(p, o); if(!r.ok){ let t=await r.text(); try{t=JSON.parse(t).detail}catch{}; throw new Error(t);} const ct=r.headers.get("content-type")||""; return ct.includes("json")? r.json() : r.text(); }
+function opts(extra={}) { return {job:JOB, only:$("#o-only").value.trim(), sections:$("#o-sections").value||null,
+  force:$("#o-force").checked, dry_run:$("#o-dry").checked, max:$("#o-max").value||null, ...extra}; }
+async function run(stage, extra={}) {
+  try { await api("/api/run",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...opts(extra),stage})}); $("#logbox").textContent=""; logOff=0; }
+  catch(e){ alert(e.message); }
+}
+
+function drawStages(){
+  $("#stages").innerHTML = STAGES.map(s=>`<div class="stage"><div class="t">${s.n} <small>${s.k}</small></div>
+    <p>${s.d}</p><div class="io">${s.io}</div><button class="b ${s.k==='all'||s.k==='make'?'p':''}" data-run="${s.k}">실행</button></div>`).join("");
+  $$("[data-run]").forEach(b=>b.onclick=()=>{ const k=b.dataset.run;
+    if(k==="plan" && $("#o-force").checked && !confirm("편성표를 새로 만들면 손으로 고친 내용이 사라집니다. 계속할까요?")) return;
+    if(k==="publish" && !$("#o-dry").checked && !confirm("실제로 YouTube 에 올립니다(일부공개). 계속할까요?")) return;
+    if(k==="make"){
+      const only=$("#o-only").value.trim();
+      if(!confirm((only? `${only} 를` : "⚠ 강 칸이 비어 있습니다 — 모든 강을") + " 집필 → 렌더 → 잇기 → 교재까지 무인으로 돌립니다(게시는 하지 않음). 계속할까요?")) return;
+    }
+    if(k==="all"){
+      const only=$("#o-only").value.trim(), dry=$("#o-dry").checked;
+      const msg = (only? `${only} 를` : "⚠ 강 칸이 비어 있습니다 — 모든 강을") + " 집필→렌더→잇기→메타→" + (dry? "게시(dry-run, 저장 직전 멈춤)" : "⚠ 실제 YouTube 게시") + "→등록까지 돌립니다. 계속할까요?";
+      if(!confirm(msg)) return;
+    }
+    run(k); });
+}
+
+function pill(n, tot){ return n===0?`<span class="pill no">0/${tot}</span>`: n>=tot?`<span class="pill ok">${n}/${tot}</span>`:`<span class="pill part">${n}/${tot}</span>`; }
+function fmtMin(s){ return s? (s/60).toFixed(1)+"분" : "-"; }
+
+async function refresh(){
+  try{ ST = await api(`/api/status?job=${JOB}`); }catch(e){ return; }
+  const s=ST.settings||{};
+  $("#jobinfo").textContent = `${ST.title||""} · 목표 ${s.lectures||"?"}강×${s.target_min||"?"}분 · 그림 ${s.image_mode} · 보강 ${s.web?"켬":"끔"} · ${s.handle} ${s.visibility}`;
+  ME = ST.me||""; const rs = ($("#o-mine").checked)? (ST.rows||[]).filter(r=>r.who===ME) : (ST.rows||[]);
+  $("#sum").textContent = rs.length? `${rs.length}강 · 집필 ${rs.filter(r=>r.compose>=r.n).length} · 완성 ${rs.filter(r=>r.video).length} · 게시 ${rs.filter(r=>r.yt).length}`
+     + (ST.book? ` · 책 ` : "") : (ST.has_input? "편성표가 없습니다 — 1 편성부터" : "원천이 없습니다 — 원천 모으기부터");
+  $("#rows").innerHTML = rs.map(r=>{ const ex=r.plan.expand_ratio; return `<tr class="subj${r.subject_no}">
+    <td><b>${r.id}</b><div class="mini">${r.subject_no}과목·${r.n}섹션</div></td>
+    <td>${r.who? `<span class="pill ${r.who===ME?'ok':''}">${r.who}</span><div class="mini">${r.team_status||""}</div>` : '<span class="mini">-</span>'}
+      ${!r.who? `<button class="b" data-claim="${r.id}">맡기</button>` : (r.who===ME? `<button class="b" data-release="${r.id}">놓기</button>` : "")}</td>
+    <td>${r.title}</td>
+    <td class="num ${ex>3.5?'warn':''}">×${ex??"-"}<div class="mini">${r.plan.expand_base==="script"?"원고 기준":"노트 기준"}</div></td>
+    <td class="num">${r.examples}</td>
+    <td>${pill(r.compose,r.n)}</td><td>${pill(r.render,r.n)}</td>
+    <td>${r.video?`<a href="#" data-see="${r.id}">${fmtMin(r.stitch_sec)}</a>`:"-"}</td>
+    <td>${r.yt?`<a target="_blank" href="https://youtu.be/${r.yt}">${r.yt}</a>`:(r.meta?'<span class="pill">메타</span>':"-")}</td>
+    <td class="row">${["compose","render","stitch","meta","publish"].map(k=>`<button class="b" data-one="${k}" data-id="${r.id}">${{compose:"집필",render:"렌더",stitch:"잇기",meta:"메타",publish:"게시"}[k]}</button>`).join("")}
+      <button class="b" data-see="${r.id}">보기</button></td></tr>`;}).join("");
+  $$("[data-claim]").forEach(b=>b.onclick=()=>claimL([b.dataset.claim], false));
+  $$("[data-release]").forEach(b=>b.onclick=()=>{ if(confirm(`${b.dataset.release} 담당을 놓을까요?`)) claimL([b.dataset.release], true); });
+  $$("[data-one]").forEach(b=>b.onclick=()=>{ if(b.dataset.one==="publish" && !$("#o-dry").checked && !confirm(`${b.dataset.id} 을 실제로 올립니다. 계속할까요?`)) return; run(b.dataset.one,{only:b.dataset.id}); });
+  $$("[data-see]").forEach(b=>b.onclick=e=>{ e.preventDefault(); openView(b.dataset.see); });
+  const sel=$("#v-lec"); if(sel.options.length!==rs.length){ sel.innerHTML=rs.map(r=>`<option value="${r.id}">${r.id} · ${r.title}</option>`).join(""); }
+  setRun(ST.run);
+}
+function setRun(r){ const el=$("#runstate"); if(!r) return;
+  el.textContent = r.running? `실행 중: run.bat ${r.cmd.join(" ")}` : (r.cmd&&r.cmd.length? `끝남(${r.code}): ${r.cmd.join(" ")}` : "대기");
+  el.style.background = r.running? "#1F4E79" : (r.code? "#b91c1c" : "#0f172a"); $("#stop").disabled=!r.running; }
+
+async function pollLog(){
+  try{ const d = await api(`/api/log?offset=${logOff}`); if(d.text){ const box=$("#logbox"); const atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
+      box.textContent += d.text; if(box.textContent.length>400000) box.textContent=box.textContent.slice(-300000); if(atEnd) box.scrollTop=box.scrollHeight; }
+    logOff=d.offset; const was=ST&&ST.run&&ST.run.running; setRun(d.run); if(was && !d.run.running) refresh(); }catch(e){}
+}
+
+// ── 보기 ──
+async function openView(lid){ tab("view"); $("#v-lec").value=lid; await loadView(); }
+async function loadView(){
+  const lid=$("#v-lec").value; if(!lid) return;
+  const r=(ST.rows||[]).find(x=>x.id===lid)||{};
+  $("#v-meta").innerHTML = `목표 개념 ${r.plan?.concept_chars||"-"}자 · 예시 ${r.examples}문항 · 확장비 ×${r.plan?.expand_ratio}` + (r.yt_title?`<br>제목: ${r.yt_title}`:"");
+  const secs = await api(`/api/manuscripts?job=${JOB}&lid=${lid}`);
+  $("#v-secs").innerHTML = "<h2>섹션 원고</h2>"+secs.map((s,i)=>`<div class="it" data-i="${i}"><b>${s.id}</b> ${s.title}
+    <div class="mini">${s.html?`${s.slides}장 · ${s.say_chars}/${s.target_chars}자 · 약 ${(s.est_sec/60).toFixed(1)}분 · 도식 ${s.figs}(새 ${s.figs_new})${s.from_script?" · 영상원고 뼈대":""}${s.sources?` · 웹출처 ${s.sources}`:""}`:"원고 없음"}${s.part?" · 렌더됨":""}</div></div>`).join("");
+  $$("#v-secs .it").forEach(el=>el.onclick=()=>{ $$("#v-secs .it").forEach(x=>x.classList.remove("on")); el.classList.add("on");
+    const s=secs[+el.dataset.i]; $("#v-title").textContent = `${s.id} ${s.title}`; $("#v-frame").src = s.html? `/files/${JOB}/${s.html}` : "about:blank";
+    if(s.part && !r.video) $("#v-video").innerHTML = `<h2>섹션 영상</h2><video controls src="/files/${JOB}/${s.part}"></video>`; });
+  $("#v-video").innerHTML = r.video? `<h2>완성 영상 ${fmtMin(r.stitch_sec)}</h2><div class="grid2"><video controls src="/files/${JOB}/out/${r.video}"></video>`
+     + (r.thumb?`<img src="/files/${JOB}/${r.thumb}" style="width:100%;border-radius:10px">`:"<div></div>")+"</div>" : `<h2>완성 영상</h2><p class="mini">아직 없습니다(렌더 → 잇기).</p>`
+     + (r.thumb?`<img src="/files/${JOB}/${r.thumb}" style="width:320px;border-radius:10px">`:"");
+  if(ST.book_html) $("#v-video").innerHTML += `<p class="mini">책 원고: <a target="_blank" href="/files/${JOB}/${ST.book_html}">미리보기</a> · <a href="/files/${JOB}/${ST.book}">EPUB 받기</a></p>`;
+  const first=$("#v-secs .it"); if(first) first.click();
+}
+$("#v-lec").onchange=loadView;
+
+// ── 목표서 ──
+async function gload(){ $("#g-text").value = await api(`/api/json?job=${JOB}&which=${$("#g-which").value}`); $("#g-msg").textContent=""; }
+$("#g-load").onclick=gload; $("#g-which").onchange=gload;
+$("#g-save").onclick=async()=>{ try{ JSON.parse($("#g-text").value); }catch(e){ $("#g-msg").textContent="JSON 오류: "+e.message; return; }
+  try{ const r=await api(`/api/json?job=${JOB}&which=${$("#g-which").value}`,{method:"PUT",body:$("#g-text").value}); $("#g-msg").textContent="저장됨 → "+r.saved; refresh(); }catch(e){ $("#g-msg").textContent=e.message; } };
+
+// ── 원천(파일 넣기) ──
+const DROPS = [
+  {k:"notes",   n:"① 요약노트 (필수)", acc:".html,.htm", d:"과목→항목→상세 HTML. h2 = 섹션, h3 = 소주제. 구조와 문항 근거(「모의 N회 M번」)의 출처."},
+  {k:"scripts", n:"② 영상 원고 (선택, 권장)", acc:".html,.htm", d:"summaryhtml2videoscripthtml 산출물. h3 의 data-say·data-read 와 도식을 뼈대로 씁니다 — 있으면 확장비가 크게 줄어듭니다."},
+  {k:"rounds",  n:"③ 문항 (선택)", acc:".json", d:"자사 모의고사 회차 mNN.json. 기출 맛보기의 출처. 없으면 개념 강의만 만듭니다."},
+  {k:"review",  n:"④ 리뷰 페이지 (선택)", acc:".html,.htm", d:"VIDEOS_BY_TAB 가 있는 review.html. 등록 단계가 강 목록을 넣은 사본을 out/register/ 에 만듭니다(탭 키는 목표서 register.review_tab)."},
+];
+function descr(k,f){
+  if(f.problem) return `<span class="warn">⚠ ${f.problem}</span>`;
+  if(k==="notes") return `${f.subject_no||"?"}부 · ${f.subject} · 섹션 ${f.h2} · 소주제 ${f.h3} · 문항 근거 ${f.refs} · 도식 ${f.svgs}`;
+  if(k==="scripts") return `${f.subject_no||"?"}부 · ${f.subject} · 섹션 ${f.h2} · 장 ${f.h3} · 내레이션 ${f.say_chars.toLocaleString()}자(약 ${Math.round(f.say_chars/5.5/60)}분) · 발음 ${f.read} · 도식 ${f.svgs}`;
+  if(k==="rounds") return `${f.round??"?"}회 · ${f.questions}문항`;
+  return f.has_videos? "VIDEOS_BY_TAB 있음" : "";
+}
+$$("[data-open]").forEach(b=>b.onclick=()=>api(`/api/open?job=${JOB}&what=${b.dataset.open}`,{method:"POST"}).catch(e=>alert(e.message)));
+async function recompute(){ try{ $("#p-weights").textContent="파일이 바뀌어 후보를 다시 계산하는 중…"; await api(`/api/propose?job=${JOB}`,{method:"POST"}); }catch(e){ $("#p-weights").textContent="후보 계산 불가: "+e.message; } await loadPlanning(); }
+async function loadInputs(){
+  $("#src-dir").textContent = `jobs/${JOB}/input/`;
+  let data={}; try{ data=await api(`/api/inputs?job=${JOB}`);}catch(e){}
+  $("#drops").innerHTML = DROPS.map(z=>{ const fs=data[z.k]||[]; return `<div class="stage drop" data-k="${z.k}">
+    <div class="t">${z.n} <small>${fs.length}개</small></div><p>${z.d}</p>
+    <div class="dz" data-k="${z.k}" style="border:2px dashed var(--pri2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;color:var(--pri);background:#f4f8fc">
+      여기에 끌어다 놓기 · 눌러서 고르기 <span class="mini">(${z.acc})</span>
+      <input type="file" multiple accept="${z.acc}" class="hide" data-k="${z.k}"></div>
+    <div style="margin-top:8px">${fs.map(f=>`<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0">
+      <div><b>${f.name}</b> <span class="mini">${f.kb}KB</span><div class="mini">${descr(z.k,f)}</div></div>
+      <button class="b d" data-del="${z.k}" data-name="${f.name}">빼기</button></div>`).join("") || '<div class="mini">아직 없습니다</div>'}</div></div>`; }).join("");
+  $$(".dz").forEach(dz=>{ const inp=dz.querySelector("input");
+    dz.onclick=e=>{ if(e.target!==inp) inp.click(); };
+    inp.onchange=()=>sendFiles(dz.dataset.k, inp.files);
+    dz.ondragover=e=>{ e.preventDefault(); dz.style.background="#dbe8f5"; };
+    dz.ondragleave=()=>{ dz.style.background="#f4f8fc"; };
+    dz.ondrop=e=>{ e.preventDefault(); dz.style.background="#f4f8fc"; sendFiles(dz.dataset.k, e.dataTransfer.files); }; });
+  $$("[data-del]").forEach(b=>b.onclick=async()=>{ if(!confirm(`${b.dataset.name} 을 뺄까요?`)) return;
+    await api(`/api/inputs?job=${JOB}&kind=${b.dataset.del}&name=${encodeURIComponent(b.dataset.name)}`,{method:"DELETE"}); await loadInputs(); recompute(); });
+}
+$("#src-import-go").onclick=async()=>{ const f=$("#src-import").value.trim(); if(!f) return;
+  try{ const r=await api("/api/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,folder:f})}); const im=r.imported;
+    $("#src-import-msg").textContent=`가져옴: 요약노트 ${im.notes} · 영상 원고 ${im.scripts} · 문항 ${im.rounds} · 리뷰 ${im.review}`; await loadInputs(); refresh(); recompute(); }
+  catch(e){ $("#src-import-msg").textContent=e.message; } };
+async function sendFiles(kind, files){
+  const fl=[...files]; if(!fl.length) return;
+  if(kind==="review" && fl.length>1){ alert("리뷰 페이지는 하나만 넣습니다"); return; }
+  for(const f of fl){
+    try{ await api(`/api/upload?job=${JOB}&kind=${kind}&name=${encodeURIComponent(f.name)}`,{method:"PUT",body:await f.arrayBuffer()}); }
+    catch(e){ alert(`${f.name}: ${e.message}`); }
+  }
+  await loadInputs(); refresh(); recompute();
+}
+
+
+// ── 계정·로그인 ──
+function kv(rows){ return rows.map(([k,v])=>`<span>${k}</span><span>${v}</span>`).join(""); }
+function okb(b){ return b? '<span class="pill ok">로그인됨</span>' : '<span class="pill no">안 됨</span>'; }
+async function loadAccounts(){
+  let d; try{ d=await api(`/api/accounts?job=${JOB}`); }catch(e){ $("#a-msg").textContent=e.message; return; }
+  $("#a-me").value = d.me||"";
+  const c=d.claude||{}; $("#a-claude").innerHTML = kv([["상태", okb(c.logged_in)],["실행 파일", c.path? `<code>${c.path}</code>` : `<span class="warn">${c.problem||"없음"}</span>`]]);
+  const y=d.youtube||{}; $("#a-yt").innerHTML = kv([["채널", y.handle||"-"],["상태", okb(y.logged_in)],["채널 ID", y.channel_id||"(첫 게시 때 자동으로 찾음)"],["공개 범위 · 재생목록", `${y.visibility||"-"} · ${y.playlist||"-"}`],["프로필", `<code>${y.profile||"-"}</code>`]]);
+  const cx=d.codex||{}; const rows=[...(cx.slots||[]), cx.default];
+  $("#a-codex").innerHTML = rows.map(r=>{ const u=r.usage||{}; const isDef=r.slot==="(기본)"; return `<tr>
+    <td>${r.active?'<span class="pill ok">●</span>':(isDef && (cx.slots||[]).length?'<span class="pill no">쓰지 않음</span>':"")}</td><td><b>${r.slot}</b>${isDef?`<div class="mini">${(cx.slots||[]).length? '<b>쓰지 않음</b> — 칸이 하나라도 있으면 이 로그인은 쓰이지 않습니다' : '칸이 없을 때만 쓰는 이 PC 의 codex login'}</div>`:""}</td>
+    <td>${r.logged_in? (r.email||"(이메일 없음)") : '<span class="pill no">로그인 안 됨</span>'}</td><td class="mini">${r.last_refresh||"-"}</td>
+    <td class="num">${u.today||0}</td><td class="num">${u.made||0}</td><td class="num">${u.failed||0}</td><td class="num">${u.limited||0}</td>
+    <td class="row">${isDef? "" : `<button class="b" data-cx="activate" data-slot="${r.slot}">이 칸 쓰기</button><button class="b" data-cx="login" data-slot="${r.slot}">다시 로그인</button><button class="b d" data-cx="remove" data-slot="${r.slot}">지우기</button>`}</td></tr>`; }).join("");
+  $$("[data-cx]").forEach(b=>b.onclick=()=>{ if(b.dataset.cx==="remove" && !confirm(`'${b.dataset.slot}' 칸(저장된 로그인)을 지울까요?`)) return; codex(b.dataset.cx, b.dataset.slot); });
+}
+async function codex(action, slot){ try{ const r=await api("/api/accounts/codex",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,slot})}); $("#a-msg").textContent=r.message; loadAccounts(); }catch(e){ $("#a-msg").textContent=e.message; } }
+$("#a-slot-login").onclick=()=>{ const s=$("#a-slot").value.trim(); if(s) codex("login", s); };
+$("#a-slot-copy").onclick=()=>{ const s=$("#a-slot").value.trim(); if(s) codex("copy_default", s); };
+$("#a-refresh").onclick=loadAccounts;
+$("#a-me-save").onclick=async()=>{ await api("/api/me",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({me:$("#a-me").value.trim()})}); loadAccounts(); refresh(); };
+$("#a-claude-open").onclick=async()=>{ try{ const r=await api(`/api/accounts/claude?job=${JOB}`,{method:"POST"}); $("#a-msg").textContent=r.message; }catch(e){ alert(e.message); } };
+$("#a-yt-login").onclick=async()=>{ try{ await api(`/api/accounts/youtube?job=${JOB}`,{method:"POST"}); $("#logbox").textContent=""; logOff=0; }catch(e){ alert(e.message); } };
+async function claimL(lids, release){ if(!ME && !release){ alert("계정·로그인 탭에서 「내 이름」을 먼저 저장하십시오"); tab("acct"); return; }
+  try{ await api("/api/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,lids,release})}); refresh(); }catch(e){ alert(e.message); } }
+
+// ── 기획: 강 수 ──
+// ★ 이 프롬프트는 서버 응답과 무관하게 **항상** 채운다(불러오기가 실패해도 빈 칸이 되지 않게).
+//   위 「새 IP」 칸에 잡 이름을 쓰면 그 이름으로, 아니면 지금 고른 잡으로.
+function recommendedPrompt(job){
+  return `${job} 의 강 수를 정하자. 확장비는 상관없고, 시장조사에서 제1의 권고안을 내 줘.
+` +
+    `1) 웹으로 경쟁 인강(주요 자격증 인강 업체들)의 이 과목 이론 강의 강 수·총 시간·과목별 비중을 조사해 출처와 함께 표로.
+` +
+    `2) 시장 범위·중앙값과 시험 출제 비중(run.bat propose --job ${job} 의 회차당 문항 수)으로 제1 권고안 1개(과목별 강 수 × 강 길이)와 이유.
+` +
+    `3) 내가 좋다고 하면 run.bat decide --job ${job} --per … --target … --note "시장조사 근거 요약" 으로 기록.`;
+}
+let promptTouched = false;
+function setPrompt(){ if(promptTouched) return; const typed=($("#n-name").value||"").trim().toLowerCase(); $("#p-prompt").value = recommendedPrompt(typed || JOB); }
+function perStr(per){ return Object.keys(per).sort((a,b)=>a-b).map(k=>per[k]).join("+"); }
+function drawProposals(p, cur){
+  $("#p-job").textContent = `— jobs/${JOB}`;
+  $("#p-cur").textContent = cur? `지금 목표서: ${Object.keys(cur.per||{}).length? perStr(cur.per)+"강" : "자동"} × ${cur.target_min}분` : "";
+  setPrompt();
+  if(!p){ $("#p-weights").textContent="아직 계산하지 않았습니다 — 「후보 계산」"; $("#p-rows").innerHTML=""; return; }
+  const w=p.weights; $("#p-weights").innerHTML = `계산 ${p.at} · 문항 ${w.rounds}회차 · 영상 원고 ${w.has_script?"있음":"없음(노트 기준)"}<br>`
+    + Object.keys(w.subjects).sort().map(k=>{const s=w.subjects[k]; return `${k}과목 ${s.subject} — 섹션 ${s.sections} · 기존 내레이션 ${s.script_min}분 · 회차당 ${s.q_per_round}문항`;}).join("<br>");
+  $("#p-rows").innerHTML = p.candidates.map((c,i)=>`<tr><td>${i+1}</td><td><b>${perStr(c.per)}</b></td><td>${c.lectures}강 × ${c.target_min}분 = ${c.hours}시간</td>
+    <td>${c.basis}</td><td class="num">${c.ratio_min}~${c.ratio_max} (${c.ratio_avg})</td><td class="num">${c.over2}</td><td class="num">${c.under09}</td><td class="num">${c.examples_min}분</td>
+    <td><button class="b" data-pick="${i}">이걸로 정하기</button></td></tr>`).join("");
+  $$("[data-pick]").forEach(b=>b.onclick=async()=>{ const c=p.candidates[+b.dataset.pick];
+    const note=prompt(`${perStr(c.per)} = ${c.lectures}강 × ${c.target_min}분으로 정합니다. 이유(기획 메모에 남습니다):`, c.basis); if(note===null) return;
+    const per=Object.keys(c.per).sort((a,b)=>a-b).map(k=>c.per[k]);
+    try{ await api("/api/decide",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,per,target:c.target_min,note})}); $("#logbox").textContent=""; logOff=0;
+      setTimeout(loadPlanning, 2500); }catch(e){ alert(e.message); } });
+}
+async function loadPlanning(){ setPrompt(); try{ const d=await api(`/api/proposals?job=${JOB}`); drawProposals(d.proposals, d.current); $("#p-brief").textContent = d.brief || "아직 정한 것이 없습니다."; }catch(e){} }
+$("#p-calc").onclick=async()=>{ $("#p-calc").disabled=true; $("#p-weights").textContent="계산 중…"; try{ await api(`/api/propose?job=${JOB}`,{method:"POST"}); await loadPlanning(); }catch(e){ alert(e.message); } $("#p-calc").disabled=false; };
+$("#p-manual").onclick=async()=>{ const per=$("#p-per").value.split(/[,+\s]+/).filter(Boolean).map(Number);
+  if(!per.length||per.some(isNaN)){ alert("과목별 강 수를 숫자로 적으십시오 (예: 4,18)"); return; }
+  try{ await api("/api/decide",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,per,target:+$("#p-target").value||35,note:$("#p-note").value.trim()})});
+    $("#logbox").textContent=""; logOff=0; setTimeout(loadPlanning,2500); }catch(e){ alert(e.message); } };
+$("#p-copy").onclick=()=>{ navigator.clipboard.writeText($("#p-prompt").value); $("#p-copy").textContent="복사됨"; setTimeout(()=>$("#p-copy").textContent="복사",1500); };
+$("#p-reload").onclick=()=>{ loadPlanning(); refresh(); };
+$("#p-prompt").oninput=()=>{ promptTouched=true; };
+$("#n-name").addEventListener("input", setPrompt);
+$("#p-reset")&&($("#p-reset").onclick=()=>{ promptTouched=false; setPrompt(); });
+
+// ── 새 IP ──
+$("#n-make").onclick=async()=>{ const b={base:JOB,name:$("#n-name").value.trim(),title:$("#n-title").value.trim(),book:$("#n-book").value.trim(),
+    target_min:+$("#n-min").value||35,playlist:$("#n-playlist").value.trim(),site_url:$("#n-site").value.trim(),import_dir:$("#n-import").value.trim()};
+  try{ const r=await api("/api/jobs/new",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
+    const im=r.imported||{}; $("#n-msg").textContent=`만들었습니다: jobs/${r.name}` + (Object.keys(im).length? ` — 가져옴: 요약노트 ${im.notes||0} · 영상 원고 ${im.scripts||0} · 문항 ${im.rounds||0} · 리뷰 ${im.review||0}` : ""); await loadJobs(r.name);
+    if(Object.values(im).some(x=>x>0)){ $("#n-msg").textContent += " — 후보 계산 중…";
+      try{ await api(`/api/propose?job=${r.name}`,{method:"POST"}); }catch(e){ $("#n-msg").textContent += " (후보 계산 실패: "+e.message+")"; }
+      tab("newjob"); $("#n-msg").textContent = $("#n-msg").textContent.replace(" — 후보 계산 중…"," — 아래 ④ 후보표를 보십시오"); }
+    else tab("newjob"); }
+  catch(e){ $("#n-msg").textContent=e.message; } };
+
+// ── 공통 ──
+function tab(t){ $$(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t)); $$("main>section").forEach(s=>s.classList.toggle("hide",s.id!=="tab-"+t));
+  if(t==="goal") gload(); if(t==="view") loadView(); if(t==="newjob"){ setPrompt(); loadInputs(); loadPlanning(); } if(t==="acct") loadAccounts(); }
+$$(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+$("#stop").onclick=()=>api("/api/stop",{method:"POST"}); $("#clear").onclick=()=>{$("#logbox").textContent="";};
+async function loadJobs(pick){ const js=await api("/api/jobs"); JOB = pick || (js.includes(JOB)?JOB:js[0]);
+  $("#job").innerHTML=js.map(j=>`<option ${j===JOB?"selected":""}>${j}</option>`).join(""); await refresh(); }
+$("#job").onchange=e=>{ JOB=e.target.value; refresh(); if(!$("#tab-newjob").classList.contains("hide")){ loadInputs(); loadPlanning(); } };
+const PAGE_VERSION="2026-10-02.2";
+(async()=>{ let ok=false; try{ const v=await api("/api/version"); ok=v.version===PAGE_VERSION; }catch(e){}
+  if(!ok){ const d=document.createElement("div"); d.style.cssText="background:#b91c1c;color:#fff;padding:10px 20px;font-weight:700";
+    d.textContent="서버가 예전 버전입니다 — run.bat 창을 닫고 다시 실행하십시오(화면만 새것이고 서버 코드는 옛것이라 일부 기능이 다르게 동작합니다)."; document.body.prepend(d); } })();
+drawStages(); loadJobs(); setInterval(pollLog,1500); setInterval(()=>{ if(!document.hidden) refresh(); },8000);
+</script>
+</body>
+</html>

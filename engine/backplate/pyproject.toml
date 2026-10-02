@@ -1,0 +1,36 @@
+[project]
+name = "backplate-showcase"
+version = "0.2.0"
+description = "단행본 장별HTML 트레일러 제작 에이전트 — 원고 → 배경판 그림 + 웹 텍스트 → HyperFrames 영상"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.27",
+  "claude-agent-sdk>=0.2.130",
+  "pydantic>=2.6",
+  "fonttools>=4.50",
+  "brotli>=1.1",
+  # ── 이미지 스튜디오(imgstudio/) — 예전에는 8765 포트의 별도 앱이었다.
+  #    전부 순수 파이썬이라 위 콘솔 의존성과 부딪히지 않는다.
+  "SQLAlchemy>=2.0",     # 그림 갤러리·배치 작업 기록 (자체 sqlite)
+  "httpx>=0.27",         # 이미지 백엔드 호출
+  "python-multipart>=0.0.9",  # 프리셋 저장(멀티파트 폼)
+  "pypdf>=4.0",          # 원고 붙여넣기에서 PDF 추출
+]
+
+# ★ 엔진(음성) 의존성은 여기 없다. `requirements-engine.txt` 로 **다른 venv** 에
+#   깐다 — onnxruntime 이 콘솔 의존성과 충돌하고, 렌더가 도는 중에도 콘솔을
+#   닫을 수 있어야 한다. 두 쪽은 파일로만 대화한다(scripts/tts_bridge.py).
+#
+# ★ Node 쪽(HyperFrames·Playwright)은 package.json 이다. setup.bat 이 둘 다 부른다.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+  "core", "llm", "pipeline", "render", "vendor",
+  "imgstudio", "imgstudio.core", "imgstudio.routes", "imgstudio.services",
+  "tts", "tts._vendor",
+]

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모션 마스크 지정기 — 19-img</title>
+<style>
+:root{--bg:#12151b;--pane:#1a1e26;--line:#2c323d;--ink:#e8ecf2;--dim:#96a0b0;
+      --text:#4da3ff;--art:#ffb03a;--sheen:#38d39f;--acc:#ff6b6b;--cover:#ff5c8a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+     font:14px/1.5 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--pane);
+       border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+h1{font-size:15px;margin:0;font-weight:700;letter-spacing:-.2px}
+.sub{color:var(--dim);font-size:12px}
+button{background:#252b36;color:var(--ink);border:1px solid var(--line);border-radius:7px;
+       padding:6px 12px;cursor:pointer;font-size:13px;font-family:inherit}
+button:hover{background:#2f3644}
+button.pri{background:#2563eb;border-color:#2563eb;font-weight:700}
+button.pri:hover{background:#1d4ed8}
+button.on{background:#2563eb;border-color:#2563eb}
+.wrap{display:flex;gap:0;height:calc(100vh - 53px)}
+.rail{width:150px;overflow-y:auto;background:#161a21;border-right:1px solid var(--line);
+      flex:0 0 150px;padding:6px}
+.th{position:relative;margin-bottom:6px;border:2px solid transparent;border-radius:5px;
+    cursor:pointer;overflow:hidden}
+.th.sel{border-color:#2563eb}
+.th img{width:100%;display:block}
+.th b{position:absolute;left:3px;top:3px;background:rgba(0,0,0,.72);border-radius:4px;
+      padding:1px 5px;font-size:11px}
+.th i{position:absolute;right:3px;top:3px;background:rgba(37,99,235,.9);border-radius:4px;
+      padding:1px 5px;font-size:11px;font-style:normal}
+.th i.zero{background:rgba(120,130,145,.75)}
+main{flex:1;display:flex;flex-direction:column;min-width:0;padding:10px 14px;overflow:auto}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.stage{position:relative;line-height:0;align-self:flex-start;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.stage img{width:100%;display:block;user-select:none;-webkit-user-drag:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.side{width:290px;flex:0 0 290px;background:#161a21;border-left:1px solid var(--line);
+      overflow-y:auto;padding:10px}
+.box{border:1px solid var(--line);border-radius:7px;padding:7px 8px;margin-bottom:7px;background:#1c212a}
+.box.sel{border-color:#2563eb;background:#1e2836}
+.box .row{display:flex;align-items:center;gap:6px}
+.box .nm{font-weight:700;font-size:13px;flex:1}
+.chip{border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:11px;cursor:pointer}
+.chip.on{color:#08111d;font-weight:700}
+.chip.t.on{background:var(--text);border-color:var(--text)}
+.chip.a.on{background:var(--art);border-color:var(--art)}
+.chip.s.on{background:var(--sheen);border-color:var(--sheen)}
+.chip.c.on{background:var(--cover);border-color:var(--cover)}
+.co{color:var(--dim);font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
+.tm{width:104px;background:#0e1116;color:#ffd479;border:1px solid var(--line);border-radius:6px;
+    padding:3px 7px;font:12px/1.4 ui-monospace,Consolas,monospace;text-align:center}
+.tm.bad{border-color:var(--acc);color:var(--acc)}
+.tm.auto{color:#6f7a89}
+.tlab{color:var(--dim);font-size:11px}
+.tbar{position:relative;height:7px;background:#0e1116;border:1px solid var(--line);
+      border-radius:4px;margin-top:5px;overflow:hidden}
+.tbar span{position:absolute;top:0;bottom:0;background:#ffd47955;border-left:2px solid #ffd479}
+.x{color:var(--acc);cursor:pointer;padding:0 4px;font-weight:700}
+.legend{font-size:12px;line-height:1.9;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}
+.legend s{text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.help{color:var(--dim);font-size:12px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.help b{color:var(--ink)}
+kbd{background:#252b36;border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px}
+textarea{width:100%;height:110px;background:#0e1116;color:#9fd0ff;border:1px solid var(--line);
+         border-radius:6px;font:11px/1.4 ui-monospace,Consolas,monospace;padding:7px;margin-top:6px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2563eb;
+       padding:9px 18px;border-radius:8px;font-weight:700;opacity:0;transition:.25s;pointer-events:none}
+.toast.on{opacity:1}
+</style></head><body>
+<header>
+  <h1>모션 마스크 지정기</h1>
+  <span class="sub" id="hd"></span>
+  <span style="flex:1"></span>
+  <button id="prev">◀ 이전</button><button id="next">다음 ▶</button>
+  <button id="clr">이 씬 비우기</button>
+  <button id="auto">시간 고르게 배분</button>
+  <button id="tclr">시간 지우기</button>
+  <button id="cpAll">모든 씬에 이 상자 복사</button>
+  <button id="ld">zones.json 불러오기</button>
+  <input type="file" id="lf" accept="application/json,.json" hidden>
+  <button class="pri" id="dl">zones.json 내려받기</button>
+  <button id="cp">JSON 복사</button>
+</header>
+<div class="wrap">
+  <div class="rail" id="rail"></div>
+  <main>
+    <div class="bar">
+      <b id="ttl"></b>
+      <span class="sub" id="tm"></span>
+    </div>
+    <div class="legend">
+      <s><i class="sw" style="background:#4da3ff"></i><b>글자</b> — 획 모양대로 아래서 슝 &nbsp;<u>제목·부제</u></s>
+      <s><i class="sw" style="background:#ffb03a"></i><b>그림</b> — 칸 전체가 좌→오 훑기 &nbsp;<u>그래프·표·도표</u></s>
+      <s><i class="sw" style="background:#38d39f"></i><b>빛만</b> — 등장 없음</s>
+      <s><i class="sw" style="background:#ff5c8a"></i><b>가리기</b> — 계속 안 보이게 지움</s>
+      <s style="color:#6f7a89">빛은 가리기를 뺀 셋에 똑같이 들어갑니다</s>
+    </div>
+    <div class="stage" id="stage"><img id="im"><canvas id="cv"></canvas></div>
+  </main>
+  <div class="side">
+    <div id="list"></div>
+    <div class="help">
+      <b>쓰는 법</b><br>
+      • 화면을 끌어 상자를 그립니다(여러 개 가능)<br>
+      • 상자 안을 끌면 이동, 모서리 8곳을 끌면 크기 조절<br>
+      • 오른쪽에서 <b>글자 / 그림 / 빛만 / 가리기</b> 를 고릅니다<br><br>
+      <b>넷의 차이 — 등장 방식만 다릅니다. 빛은 가리기를 뺀 셋에 들어갑니다</b><br>
+      • <b style="color:#4da3ff">글자</b> — <b>획 모양대로</b> 아래에서 슝 올라옵니다. 제목·부제처럼
+        평평한 바탕 위에 얹힌 글자에 쓰세요<br>
+      • <b style="color:#ffb03a">그림</b> — <b>칸 전체가 좌→오</b>로 훑리며 드러납니다. 곡선·축·눈금이
+        섞인 그래프·표·2축 도표는 이걸로. 획 단위로 띄우면 곡선이 미끄러져 보입니다<br>
+      • <b style="color:#38d39f">빛만</b> — 등장 없이 처음부터 있고, 어두운 획 위로 빛만 오갑니다<br>
+      • <b style="color:#ff5c8a">가리기</b> — 등장 없이 <b>영상 내내 지운 채로 둡니다</b>. 원본에
+        잘못 나온 글자·깨진 자리를 덮어 안 보이게 할 때 쓰세요. 상자 테두리 색으로
+        메워 지우고, 다시 떠오르지 않습니다<br><br>
+      <b>안 그려도 됩니다</b> — 상자를 안 그린 자리는 액자가 훑고 들어올 때
+      <b>한 번에 같이</b> 나옵니다. 상자는 "한 박자 늦게 뜨게 하고 싶은 것"만 그리시면 됩니다.<br><br>
+      • <kbd>←</kbd><kbd>→</kbd> 씬 이동 · <kbd>Del</kbd> 선택 상자 삭제 · <kbd>Ctrl+Z</kbd> 되돌리기<br>
+      • 다 하시면 <b>zones.json 내려받기</b> 를 눌러 그 파일을 채팅에 올려 주세요<br><br>
+      <b>액자 등장은 기본</b> — 씬이 바뀌면 액자가 좌→오로 0.9초 훑고 들어옵니다.
+      <b>항상 들어가므로 상자로 지정할 필요가 없습니다.</b> 상자를 하나도 안 그린 씬도 액자는 나옵니다.<br><br>
+      <b style="color:#ffd479">시간 — 등장~빛끝 (0:00~0:00)</b><br>
+      상자마다 <b>「그 말을 할 때 뜨고, 그 말이 끝날 때까지 빛나게」</b> 시각을 적습니다.
+      초는 <b>이 씬이 시작한 순간부터</b> 셉니다(위에 이 씬 길이가 나옵니다).<br>
+      • 앞 숫자 = <b>뜨는 시각</b> · 뒤 숫자 = <b>빛이 멈추는 시각</b><br>
+      • 그 사이에는 <b>이 상자에만</b> 빛이 왕복합니다. 다른 글자는 가만히 있습니다 —
+        그래서 보는 사람 눈이 지금 말하는 곳에 머뭅니다<br>
+      • 비워 두면 <b>자동</b>입니다(액자 뒤에 위에서 아래로 0.4초 간격, 빛은 다음 상자가 뜰 때까지)<br>
+      • <b>시간 고르게 배분</b> 을 누르면 씬 길이에 맞춰 한 번에 채워 줍니다. 그 뒤
+        내레이션을 들으며 숫자만 고치는 편이 빠릅니다<br>
+      <span style="color:#7d8898">보기 — 0:01.2~0:08 제목 · 0:08~0:19 라벨1 · 0:19~0:31 라벨2 · 0:31~0:44 라벨3</span><br><br>
+      <b>씬 끝 걷어내기</b> — 씬이 끝나기 0.45초 전에 화면을 오→왼으로 훑어 지웁니다.
+      다음 씬은 <b>빈 배경</b>에서 시작하므로 이전 화면 자국이 남지 않습니다.
+      <textarea id="out" readonly></textarea>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const D=__DATA__, IMGS=__IMGS__;
+const S=D.scenes; let cur=0, sel=-1, undo=[];
+const im=document.getElementById('im'), cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const COL={text:'#4da3ff',art:'#ffb03a',sheen:'#38d39f',cover:'#ff5c8a'};
+const NM={text:'글자',art:'그림',sheen:'빛만',cover:'가리기'};
+function snap(){undo.push(JSON.stringify(S.map(s=>s.boxes)));if(undo.length>60)undo.shift();}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');
+  setTimeout(()=>e.classList.remove('on'),1300);}
+function rail(){const r=document.getElementById('rail');r.innerHTML='';
+  S.forEach((s,i)=>{const d=document.createElement('div');d.className='th'+(i==cur?' sel':'');
+    d.innerHTML=`<img src="${IMGS[i]}"><b>${i+1}</b><i class="${s.boxes.length?'':'zero'}">${s.boxes.length}</i>`;
+    d.onclick=()=>{cur=i;sel=-1;draw();};r.appendChild(d);});
+  const a=r.children[cur]; if(a)a.scrollIntoView({block:'nearest'});}
+function fit(){cv.width=im.clientWidth;cv.height=im.clientHeight;}
+function sx(){return cv.width/D.W} function sy(){return cv.height/D.H}
+function paint(){fit();ctx.clearRect(0,0,cv.width,cv.height);
+  S[cur].boxes.forEach((b,i)=>{const c=COL[b.kind]||'#4da3ff';
+    const x=b.x*sx(),y=b.y*sy(),w=b.w*sx(),h=b.h*sy();
+    ctx.fillStyle=c+'22';ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle=c;ctx.lineWidth=i==sel?2.5:1.5;ctx.setLineDash(i==sel?[]:[5,3]);
+    ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+    ctx.fillStyle=c;ctx.fillRect(x,y-15,20,15);
+    ctx.fillStyle='#0b0f14';ctx.font='bold 11px sans-serif';ctx.fillText(i+1,x+6,y-4);
+    if(i==sel){ctx.fillStyle=c;hs(b).forEach(p=>ctx.fillRect(p[0]-3,p[1]-3,6,6));}});}
+function hs(b){const x=b.x*sx(),y=b.y*sy(),w=b.w*sx(),h=b.h*sy();
+  return [[x,y],[x+w/2,y],[x+w,y],[x+w,y+h/2],[x+w,y+h],[x+w/2,y+h],[x,y+h],[x,y+h/2]];}
+function list(){const L=document.getElementById('list');L.innerHTML='';
+  if(!S[cur].boxes.length)L.innerHTML='<div class="co">상자가 없습니다. 화면을 끌어 그리세요.</div>';
+  S[cur].boxes.forEach((b,i)=>{const d=document.createElement('div');
+    d.className='box'+(i==sel?' sel':'');
+    const sp=span(b.t), L2=len(cur);
+    d.innerHTML=`<div class="row"><span class="nm">${i+1}. ${NM[b.kind]}</span>
+      <span class="chip t ${b.kind=='text'?'on':''}" data-k="text">글자</span>
+      <span class="chip s ${b.kind=='sheen'?'on':''}" data-k="sheen">빛만</span>
+      <span class="chip c ${b.kind=='cover'?'on':''}" data-k="cover">가리기</span>
+      <span class="x">✕</span></div>
+      <div class="row" style="margin-top:4px">
+        <span class="tlab">등장~빛끝</span>
+        <input class="tm ${b.t?(sp?'':'bad'):'auto'}" value="${b.t||''}"
+               placeholder="0:00~0:00" spellcheck="false">
+        <span class="tlab">${b.t?(sp?`${sp[0].toFixed(1)}s → ${sp[1]==null?'다음까지':sp[1].toFixed(1)+'s'}`:'형식 오류'):'자동'}</span>
+      </div>
+      <div class="tbar">${sp?`<span style="left:${Math.min(99,100*sp[0]/L2)}%;width:${Math.max(1,100*((sp[1]==null?L2:sp[1])-sp[0])/L2)}%"></span>`:''}</div>
+      <div class="co">x ${b.x} · y ${b.y} · ${b.w}×${b.h}</div>`;
+    d.onclick=e=>{const k=e.target.dataset.k;
+      if(k){snap();b.kind=k;draw();return;}
+      if(e.target.className=='x'){snap();S[cur].boxes.splice(i,1);sel=-1;draw();return;}
+      if(e.target.tagName=='INPUT')return;
+      sel=i;draw();};
+    const ti=d.querySelector('input.tm');
+    ti.onfocus=()=>{if(sel!=i){sel=i;paint();}};
+    ti.onchange=()=>{snap();b.t=ti.value.trim();draw();};
+    L.appendChild(d);});}
+// "0:03~0:15" → [3,15] · "0:03~" → [3,null] · 못 읽으면 null
+function sec(x){x=(x||'').trim();if(!x)return null;
+  if(x.includes(':')){const p=x.split(':');const m=parseInt(p[p.length-2]||'0',10),
+    s=parseFloat(p[p.length-1]||'0');return (isNaN(m)||isNaN(s))?null:m*60+s;}
+  const v=parseFloat(x);return isNaN(v)?null:v;}
+function span(t){if(!t)return null;const p=String(t).split(/[~\-–]/);
+  const a=sec(p[0]);if(a==null)return null;
+  return [a, p.length>1?sec(p[1]):null];}
+function len(i){const n=(i+1<S.length)?S[i+1].cut:(S[i].cut+60);return Math.max(1,n-S[i].cut);}
+function mmss(v){const m=Math.floor(v/60),s=v-m*60;
+  return m+':'+(s<10?'0':'')+(Math.round(s*10)/10);}
+function json(){return JSON.stringify({video:D.video,W:D.W,H:D.H,
+  scenes:S.map((s,i)=>({i:s.i,cut:s.cut,len:+len(i).toFixed(2),
+    boxes:s.boxes.map(b=>({x:b.x,y:b.y,w:b.w,h:b.h,kind:b.kind,t:b.t||''}))}))},null,1);}
+/* ★ 이어서 하기 — 내려받아 둔 zones.json 을 다시 읽어 들인다.
+   예전에는 이 문이 없었다. 그래서 탭을 닫으면 찍어 둔 상자가 사라졌고, 앱에서
+   고친 차례·시각을 놓고 지정기를 열면 처음 자동 제안으로 돌아가, 거기서
+   내려받아 넣는 순간 앱 쪽 작업이 통째로 덮였다(2026-08-16 에 시각 186개가
+   그렇게 날아갔다). 읽어 들일 수 있으면 그 사고가 없어진다.
+   ★ 씬은 **`cut` 시각으로 짝짓는다.** 번호로 맞추면 영상을 다시 렌더해 장이
+   하나 늘었을 때 전부 한 칸씩 밀린다. `remaster` 도 같은 규칙을 쓴다(±1.5초). */
+function loadZones(txt){
+  let z; try{ z=JSON.parse(txt); }catch(e){ alert('zones.json 이 아닙니다'); return; }
+  const zs=z&&z.scenes; if(!Array.isArray(zs)||!zs.length){ alert('scenes 가 없습니다'); return; }
+  let hit=0, miss=0;
+  S.forEach((s,i)=>{
+    let best=null,bd=1e9;
+    zs.forEach(o=>{const d=Math.abs((o.cut==null?-999:o.cut)-s.cut); if(d<bd){bd=d;best=o;}});
+    if(best&&bd<=1.5){
+      s.boxes=(best.boxes||[]).map(b=>({x:+b.x||0,y:+b.y||0,w:+b.w||0,h:+b.h||0,
+        kind:['art','sheen','cover'].includes(b.kind)?b.kind:'text', t:b.t||''}));
+      hit++;
+    } else miss++;
+  });
+  sel=-1; undo=[]; draw();
+  alert(`불러왔습니다 — 짝지은 씬 ${hit}개`+(miss?` · 못 짝지은 씬 ${miss}개`:'')
+        +`\n상자 ${S.reduce((a,s)=>a+s.boxes.length,0)}개`);
+}
+document.getElementById('ld').onclick=()=>document.getElementById('lf').click();
+document.getElementById('lf').onchange=function(){
+  const f=this.files&&this.files[0]; this.value='';
+  if(!f) return;
+  const r=new FileReader(); r.onload=()=>loadZones(String(r.result)); r.readAsText(f);
+};
+
+function draw(){im.src=IMGS[cur];document.getElementById('ttl').textContent=`씬 ${cur+1} / ${S.length}`;
+  document.getElementById('tm').textContent=
+    `전환 ${S[cur].cut}초 · 이 씬 길이 ${len(cur).toFixed(1)}초 (0:00 ~ ${mmss(len(cur))})`;
+  document.getElementById('hd').textContent=`${D.video} · ${S.length}장 · 상자 ${S.reduce((a,s)=>a+s.boxes.length,0)}개`;
+  paint();list();rail();document.getElementById('out').value=json();}
+let mode=null,st=null,hi=-1;
+function pos(e){const r=cv.getBoundingClientRect();
+  return {x:(e.clientX-r.left)/sx(),y:(e.clientY-r.top)/sy(),cx:e.clientX-r.left,cy:e.clientY-r.top};}
+cv.addEventListener('pointerdown',e=>{const p=pos(e);cv.setPointerCapture(e.pointerId);
+  if(sel>=0){const H=hs(S[cur].boxes[sel]);
+    for(let i=0;i<8;i++)if(Math.abs(H[i][0]-p.cx)<7&&Math.abs(H[i][1]-p.cy)<7){
+      snap();mode='rs';hi=i;st={...S[cur].boxes[sel]};return;}}
+  for(let i=S[cur].boxes.length-1;i>=0;i--){const b=S[cur].boxes[i];
+    if(p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h){
+      snap();sel=i;mode='mv';st={...b,px:p.x,py:p.y};draw();return;}}
+  snap();mode='new';st={x:p.x,y:p.y};
+  S[cur].boxes.push({x:Math.round(p.x),y:Math.round(p.y),w:1,h:1,kind:'text'});
+  sel=S[cur].boxes.length-1;draw();});
+cv.addEventListener('pointermove',e=>{if(!mode)return;const p=pos(e);const b=S[cur].boxes[sel];
+  if(mode=='new'){b.x=Math.round(Math.min(st.x,p.x));b.y=Math.round(Math.min(st.y,p.y));
+    b.w=Math.round(Math.abs(p.x-st.x));b.h=Math.round(Math.abs(p.y-st.y));}
+  else if(mode=='mv'){b.x=Math.round(Math.max(0,Math.min(D.W-b.w,st.x+p.x-st.px)));
+    b.y=Math.round(Math.max(0,Math.min(D.H-b.h,st.y+p.y-st.py)));}
+  else if(mode=='rs'){let x0=st.x,y0=st.y,x1=st.x+st.w,y1=st.y+st.h;
+    if([0,6,7].includes(hi))x0=p.x; if([2,3,4].includes(hi))x1=p.x;
+    if([0,1,2].includes(hi))y0=p.y; if([4,5,6].includes(hi))y1=p.y;
+    b.x=Math.round(Math.min(x0,x1));b.y=Math.round(Math.min(y0,y1));
+    b.w=Math.round(Math.abs(x1-x0));b.h=Math.round(Math.abs(y1-y0));}
+  paint();});
+cv.addEventListener('pointerup',()=>{if(mode=='new'){const b=S[cur].boxes[sel];
+    if(b.w<8||b.h<8){S[cur].boxes.pop();sel=-1;}}mode=null;draw();});
+addEventListener('keydown',e=>{
+  if(e.key=='ArrowLeft'&&cur>0){cur--;sel=-1;draw();}
+  else if(e.key=='ArrowRight'&&cur<S.length-1){cur++;sel=-1;draw();}
+  else if((e.key=='Delete'||e.key=='Backspace')&&sel>=0){snap();S[cur].boxes.splice(sel,1);sel=-1;draw();}
+  else if(e.ctrlKey&&e.key=='z'&&undo.length){const u=JSON.parse(undo.pop());
+    S.forEach((s,i)=>s.boxes=u[i]);sel=-1;draw();}});
+document.getElementById('prev').onclick=()=>{if(cur>0){cur--;sel=-1;draw();}};
+document.getElementById('next').onclick=()=>{if(cur<S.length-1){cur++;sel=-1;draw();}};
+document.getElementById('clr').onclick=()=>{snap();S[cur].boxes=[];sel=-1;draw();};
+document.getElementById('auto').onclick=()=>{const bs=S[cur].boxes;
+  if(!bs.length)return toast('상자가 없습니다');
+  snap();const L=len(cur),s0=1.2,e0=Math.max(s0+1,L-0.6),st=(e0-s0)/bs.length;
+  bs.forEach((b,k)=>{b.t=mmss(Math.round((s0+st*k)*10)/10)+'~'+mmss(Math.round((s0+st*(k+1))*10)/10);});
+  draw();toast('말하는 순서대로 고르게 나눴습니다 — 실제 내레이션에 맞춰 고치세요');};
+document.getElementById('tclr').onclick=()=>{snap();
+  S[cur].boxes.forEach(b=>b.t='');draw();toast('이 씬 시간을 지웠습니다(자동)');};
+document.getElementById('cpAll').onclick=()=>{if(sel<0)return toast('먼저 상자를 고르세요');
+  snap();const b=S[cur].boxes[sel];S.forEach((s,i)=>{if(i!=cur)s.boxes.push({...b})});
+  draw();toast('모든 씬에 복사했습니다');};
+document.getElementById('dl').onclick=()=>{const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json()],{type:'application/json'}));
+  a.download='zones.json';a.click();toast('zones.json 저장');};
+document.getElementById('cp').onclick=()=>{navigator.clipboard.writeText(json());toast('복사했습니다');};
+im.onload=()=>paint(); addEventListener('resize',paint);
+draw();
+</script></body></html>

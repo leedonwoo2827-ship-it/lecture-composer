@@ -1,0 +1,105 @@
+/* tokens.css — Miro 디자인 시스템 토큰 (로컬 SaaS 등급)
+ *
+ * _context/miro-design.md 의 토큰 스펙을 구체 값으로 구현했다.
+ * Roobert PRO 는 비공개 폰트라 한글 지원이 우수한 Pretendard 로 대체(기하학적·둥근 인상 동일 역할).
+ * 마케팅 히어로/푸터는 제외하고, 토큰(색/타이포/필 버튼/카드/라운드/엘리베이션)만 작업 도구 UI 에 적용한다.
+ */
+
+@font-face {
+  font-family: "Pretendard";
+  src: url("../fonts/PretendardVariable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inconsolata";
+  src: url("../fonts/Inconsolata-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  /* ── Brand & Accent ─────────────────────────────────────── */
+  --brand-yellow: #ffd02f;
+  --brand-yellow-deep: #f2c200;
+  --yellow-light: #fff6d6;
+  --yellow-dark: #594d00;
+  --brand-blue: #4262ff;
+  --blue-pressed: #2a3fb8;
+  --brand-coral: #ff5c39;
+  --coral-light: #ffe9e2;
+  --coral-dark: #7a2e1e;
+  --brand-rose: #f4c6d7;
+  --rose-light: #fce7ef;
+  --brand-teal: #2bbfa6;
+  --teal-light: #ddf3ef;
+  --moss-dark: #1e4d45;
+  --brand-pink: #fce7f3;
+  --brand-orange-light: #ffe7d1;
+
+  /* ── Surface ────────────────────────────────────────────── */
+  --canvas: #ffffff;
+  --surface: #f5f6f8;
+  --surface-soft: #fafafb;
+  --surface-yellow: #fff6d6;
+  --surface-featured: #ecebff;       /* lavender */
+  --hairline: #e6e6ea;
+  --hairline-soft: #f0f0f3;
+  --hairline-strong: #d2d2d9;
+  --footer-bg: #050038;
+
+  /* ── Text ───────────────────────────────────────────────── */
+  --ink-deep: #050038;
+  --ink: #1a1a2e;
+  --charcoal: #2e2e3a;
+  --slate: #5b5b6b;
+  --steel: #6b6b7b;
+  --stone: #8a8a98;
+  --muted: #abab b5;
+  --muted: #ababb5;
+  --on-dark: #ffffff;
+  --on-dark-muted: rgba(255, 255, 255, 0.66);
+
+  --primary: #050038;                /* 검정 필 CTA */
+  --on-primary: #ffffff;
+
+  /* ── Semantic ───────────────────────────────────────────── */
+  --success: #1a9e5c;
+  --error-bg: #fde7e7;
+  --error-border: #e0563e;
+  --error-text: #c0392b;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-sans: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Inconsolata", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── Spacing (4px base) ─────────────────────────────────── */
+  --sp-xxs: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 16px;
+  --sp-lg: 20px;
+  --sp-xl: 24px;
+  --sp-xxl: 32px;
+  --sp-xxxl: 40px;
+  --sp-section: 64px;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-xxl: 20px;
+  --r-xxxl: 28px;
+  --r-full: 9999px;
+
+  /* ── Elevation ──────────────────────────────────────────── */
+  --el-1: rgba(5, 0, 56, 0.04) 0px 1px 2px 0px;
+  --el-2: rgba(5, 0, 56, 0.06) 0px 4px 12px 0px;
+  --el-3: rgba(5, 0, 56, 0.08) 0px 12px 32px -4px;
+  --el-4: rgba(5, 0, 56, 0.12) 0px 16px 48px -8px;
+
+  --transition: 160ms ease;
+}
