@@ -132,7 +132,8 @@ def run(job, pid: int, slug: str, project: Dict[str, Any], *, force: bool = Fals
 
     job.add_log("컴포지션 만드는 중")
     built = hyper.build(deck, proj_dir=proj_dir, out_dir=comp,
-                        title=project.get("title") or slug)
+                        title=project.get("title") or slug,
+                        theme=project.get("video_theme"))
     job.add_log(f"{built['scenes']}장 · 라벨 {built['labels']}개 · "
                 f"{built['sec']:.0f}초")
     warn: List[str] = list(built.get("missing") or [])

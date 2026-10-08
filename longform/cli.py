@@ -20,6 +20,7 @@
   claim          팀 분담       --only L03,L04 → 이 PC 사람(local.json me)이 맡는다 / release 로 놓기
   me             내 이름        --note "홍길동" → local.json (이 PC 를 쓰는 사람)
   status         강별 진행 상황
+  redraw         도식 다시 그리기  영상 테마(backplate.theme) 스타일로 원고 도식 SVG 를 Claude 가 새로 그림(캐시)
 """
 from __future__ import annotations
 
@@ -175,6 +176,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif cmd == "examples":
         from longform import s1_curriculum
         s1_curriculum.refresh_examples(job)
+    elif cmd == "redraw":
+        from longform import redraw
+        redraw.run(job, only)
     elif cmd == "status":
         status(job)
     elif cmd == "login":

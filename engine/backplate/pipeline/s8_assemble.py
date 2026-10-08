@@ -256,6 +256,10 @@ def compose(pid: int, slug: str, project: Dict[str, Any]) -> tuple[Dict[str, Any
             #   못 간다 — 실제로 전면으로 만든 덱이 액자로 떴다(2026-08-29).
             #   값이 없으면 액자다: 옛 프로젝트가 그대로 나와야 한다.
             "image_fit": project.get("image_fit") or "frame",
+            # video theme (render/video_theme.py) - empty = original ivory look
+            "video_theme": project.get("video_theme") or "",
+            "theme_logo": project.get("theme_logo") or "",
+            "theme_caption": project.get("theme_caption") or "",
             "repo": {"name_with_owner": repo.get("name_with_owner") or "",
                      "head_sha": (repo.get("head_sha") or "")[:8],
                      "commit_count": repo.get("commit_count") or 0},

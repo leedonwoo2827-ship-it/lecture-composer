@@ -17,8 +17,9 @@ assets/
 # 별도 레포라 서브모듈처럼 걸리지 않게 통째로 무시한다.
 voicewright/
 
-# Pretendard 원본 — setup.bat 이 받아온다
-static/fonts/
+# Pretendard 원본 — setup.bat 이 받아온다. SUIT(단정 테마)는 OFL 이라 레포에 싣는다
+static/fonts/*
+!static/fonts/suit/
 
 # 내 PC 전용 경로 — 배포본에 나가면 안 된다
 showcase.config.local.json
@@ -64,4 +65,5 @@ review.html
 node_modules/
 .venv/
 .venv-app/
-static/fonts/
+static/fonts/*
+!static/fonts/suit/

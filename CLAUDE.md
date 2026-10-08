@@ -34,6 +34,12 @@
 5. 사용자가 좋다고 하면 `run.bat decide ... --note "<시장조사 근거 요약>"` 로 적고, 편성 결과(강별 제목)를 짧게 보여 준다.
 6. 섹션 경계를 손으로 옮기고 싶다고 하면 `jobs/J/curriculum.json` 을 고친다(그 뒤 plan 을 --force 로 돌리면 덮어쓰므로 돌리지 않는다).
 
+## 영상 테마 (이 레포 = 회사 원본 52ebd4a + 「단정 스케치북」 테마)
+- 목표서 `backplate.theme`: 비우거나 "ivory" = 기존 룩(**한 픽셀도 바뀌면 안 된다**), "danjeong" = 단정 스케치북.
+- 규칙·바뀐 파일·회사 PC 이식 절차는 `docs/테마-단정.md`. 색·글꼴은 `engine/backplate/render/video_theme.py` 한 곳에서만 고친다.
+- 테마를 손볼 때는 먼저 `.venv\Scripts\python tools\theme_preview.py` 로 `out/theme-preview/danjeong/contact.png` 를 보고, 끝나면 `--theme ivory` 로 회귀를 본다.
+- 도식은 `run.bat redraw`(Claude)가 테마 스타일로 다시 그린다 — **글자·구조는 원본 그대로**(검증 실패 시 원본). 라벨은 `render/sync.py` 가 말소리(STT)에 맞춘다.
+
 ## 문항·원천
 문항은 별도 문항 앱이 과정별 **책 폴더**의 `_rounds/mNN.json` 에 만든다. 구조·가져오기 규칙은 `docs/원천-가져오기.md`, 이 PC의 실제 책 폴더 표는 `docs/_local/`(깃 제외).
 문항이 미확정이면 예시 자리(14분)를 비워 두고 진행하고, 들어오면 `run.bat examples` → compose(집필 재사용) → render.

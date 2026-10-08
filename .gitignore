@@ -22,6 +22,11 @@ jobs/*
 !jobs/example/
 jobs/example/*
 !jobs/example/job.json
+!jobs/sqld-danjeong-sample/
+jobs/sqld-danjeong-sample/*
+!jobs/sqld-danjeong-sample/job.json
+out/
+.venv/
 jobs/_test/
 logs/
 

@@ -245,7 +245,7 @@ _DEFS: List[Stage] = [
           # overrides_rev — 손편집이 조립을 낡게 만든다(위 server.py 참고)
           # image_swap — 그림으로 갈아끼우기를 켜고 끄면 덱이 통째로 달라진다
           reads=["title", "slug", "live_url", "items", "brand", "overrides_rev",
-                 "image_swap"],
+                 "image_swap", "video_theme", "theme_logo", "theme_caption"],
           code_version=2),
     # `bgm` — 배경음악을 갈아 끼우면 완성본만 다시 구우면 된다. 조립(s8)은
     # 배경음악을 모르므로 여기서만 읽는다. 결정론이라 돈이 들지 않는다.
@@ -268,7 +268,8 @@ _DEFS: List[Stage] = [
     #   오디오도 HyperFrames 가 먹고, 마지막에 −16 LUFS 로 맞춘다.
     Stage("s12h-hyper", "모션 영상(HyperFrames)", "dist", "ext",
           deps=["s8-assemble", "s10-tts"],
-          reads=["slug", "title", "image_fit"], code_version=1),
+          reads=["slug", "title", "image_fit", "video_theme", "theme_logo", "theme_caption"],
+          code_version=2),
 ]
 
 STAGES: Dict[str, Stage] = {s.key: s for s in _DEFS}

@@ -1,0 +1,4 @@
+# 말소리 동기화(render/sync.py) — 선택 설치. 없으면 글자 비례로 맞춘다.
+#   engine\backplate\.venv-app\Scripts\pip install -r requirements-sync.txt
+faster-whisper>=1.0
+numpy

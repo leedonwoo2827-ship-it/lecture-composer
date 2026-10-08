@@ -173,7 +173,7 @@ def _sec(v: Any, dflt: float = 0.0) -> float:
         return dflt
 
 
-def plan(deck: Dict[str, Any]) -> List[Dict[str, Any]]:
+def plan(deck: Dict[str, Any], proj_dir: Path | None = None, sync: bool = False) -> List[Dict[str, Any]]:
     # ★ **여기서 라벨 시각을 박는다**(2026-09-18에 잡은 구멍).
     #   `stamp_label_times` 는 `render/slides.py` 의 덱 렌더에서만 불리고 있었다.
     #   영상은 그 길을 안 지나므로 `at` 이 계속 비어 있었고, 아래 `_scene_labels`
@@ -187,6 +187,10 @@ def plan(deck: Dict[str, Any]) -> List[Dict[str, Any]]:
     #   상수만 보려고 읽는 자리(`s12h_hyper` 의 import)가 있다.
     from render.slides import cue_map, stamp_label_times
     stamp_label_times(deck.get("slides") or [], cue_map(deck))
+    if sync:
+        # ★ 테마가 켜면 **말소리에 맞춘다**(render/sync.py) — 문장 시작이 아니라 라벨 글자를 말하는 순간.
+        from render.sync import stamp
+        deck["_sync"] = stamp(deck.get("slides") or [], proj_dir)
     return _plan(deck)
 
 
@@ -206,6 +210,9 @@ def _plan(deck: Dict[str, Any]) -> List[Dict[str, Any]]:
         dur = au + TAIL_SEC if au > 0 else max(4.0, 10.0 * max(1, len(lbs)))
         out.append({
             "no": int(s.get("no") or 0),
+            # 테마가 읽는 칸 — 장 종류(cover/closing)와 longform 이 덮어쓰기로 실은 look(덩이·키커)
+            "kind": s.get("kind") or "",
+            "look": s.get("look") or {},
             "title": s.get("title") or "",
             "image": s.get("image") or "",
             "audio": (s.get("audio") or {}).get("file") or "",
@@ -224,6 +231,8 @@ def _plan(deck: Dict[str, Any]) -> List[Dict[str, Any]]:
                 # 빛이 멎는 때 = **다음 라벨이 뜨는 때**(마지막은 장 끝).
                 # 없으면 빛을 안 준다 — 끝을 모르면 장 끝까지 번쩍이게 된다.
                 "until": l.get("until"),
+                # 그 라벨 글을 다 말한 때(sync 가 박음) — 타이핑 속도를 말 속도에 맞춘다
+                "say_end": l.get("say_end"),
                 # 셀색 갈래 — 없음/"line"=윤곽(기본) · False=끔 · "box"/True=판.
                 # **값을 그대로 넘긴다** — 읽는 규칙은 `_cell_cls` 한 곳에 둔다
                 "cell": l.get("cell"),
@@ -337,10 +346,48 @@ def _timeline(scenes: List[Dict[str, Any]]) -> str:
     L.append('window.__timelines["main"] = tl;')
     return "\n".join(L)
 
+def _body_themed(scenes: List[Dict[str, Any]], total: float, th: Dict[str, Any],
+                 meta: Dict[str, Any]) -> str:
+    """테마 룩 — 층(바탕·덩어리·오브젝트·낙서·글자)은 `video_theme.scene_html` 이 만든다.
+    오디오 자리는 원래 `_body` 와 **같은 규칙**이다."""
+    from render import video_theme
+    p: List[str] = [f'<div id="root" data-composition-id="main" data-start="0" '
+                    f'data-width="{W}" data-height="{H}" data-duration="{total:.3f}" '
+                    f'data-fps="{FPS}">']
+    n = len(scenes)
+    for i, sc in enumerate(scenes):
+        p.append(f'<section id="sc{sc["no"]:03d}" class="{video_theme.section_class(sc)}" '
+                 f'data-start="{sc["start"]:.3f}" data-duration="{sc["dur"]:.3f}">')
+        p.append(video_theme.scene_html(sc, i, n, th, meta))
+        p.append("</section>")
+    for sc in scenes:
+        if sc["audio"] and sc["audio_sec"] > 0:
+            p.append(f'<audio id="vo{sc["no"]:03d}" src="./audio/{sc["no"]:03d}.wav" '
+                     f'data-audio-group="voiceover" data-start="{sc["start"]:.3f}" '
+                     f'data-duration="{sc["audio_sec"]:.3f}" data-volume="1"></audio>')
+    p.append("</div>")
+    return "\n".join(p)
+
+
+def _timeline_themed(scenes: List[Dict[str, Any]], th: Dict[str, Any]) -> str:
+    from render import video_theme
+    L = ["const tl = gsap.timeline({ paused: true });",
+         "const has = s => document.querySelector(s) !== null;"]
+    for sc in scenes:
+        L += video_theme.timeline(sc, "sc%03d" % sc["no"], LBL_DUR, LBL_RISE, _sec, th)
+    L.append('window.__timelines["main"] = tl;')
+    return "\n".join(L)
+
+
 def build(deck: Dict[str, Any], *, proj_dir: Path, out_dir: Path,
-          title: str = "") -> Dict[str, Any]:
-    """컴포지션 폴더를 만든다. 돌려주는 값은 사람이 읽을 요약."""
-    scenes = plan(deck)
+          title: str = "", theme: str | None = None) -> Dict[str, Any]:
+    """컴포지션 폴더를 만든다. 돌려주는 값은 사람이 읽을 요약.
+
+    theme — `render/video_theme.py` 의 이름. 비었거나 "ivory" 면 **원래 룩 그대로**다.
+    """
+    from render import video_theme
+    th = video_theme.get(theme or (deck.get("project") or {}).get("video_theme"))
+    scenes = plan(deck, proj_dir, sync=bool(th and th.get("sync")))
     total = round(sum(s["dur"] for s in scenes), 3)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -353,6 +400,11 @@ def build(deck: Dict[str, Any], *, proj_dir: Path, out_dir: Path,
     shutil.copy2(GSAP, out_dir / "vendor" / "gsap.min.js")
     for f in FONT_DIR.glob("Pretendard-*.woff2"):
         shutil.copy2(f, out_dir / "assets" / "fonts" / f.name)
+    if th:
+        for f in video_theme.font_files(th):
+            if not f.is_file():
+                raise FileNotFoundError(f"테마 글꼴이 없습니다: {f}")
+            shutil.copy2(f, out_dir / "assets" / "fonts" / f.name)
     lic = FONT_DIR / "LICENSE-Pretendard.txt"
     if lic.is_file():                      # SIL OFL — 재배포 시 동봉해야 한다
         shutil.copy2(lic, out_dir / "assets" / "fonts" / lic.name)
@@ -372,11 +424,20 @@ def build(deck: Dict[str, Any], *, proj_dir: Path, out_dir: Path,
             else:
                 missing.append(f"{sc['no']}번 소리")
 
-    html = (HEAD % {"W": W, "H": H, "title": esc(title or "덱"), "css": CSS}
-            + _body(scenes, total)
-            + "\n<script>\n" + _timeline(scenes) + "\n</script>\n</body></html>\n")
+    if th:
+        head = HEAD.replace("<style>\n", "<style>\n" + video_theme.font_faces(th).replace("%", "%%"), 1)
+        pj = deck.get("project") or {}
+        meta = {"logo": pj.get("theme_logo") or "", "caption": pj.get("theme_caption") or ""}
+        html = (head % {"W": W, "H": H, "title": esc(title or "덱"), "css": video_theme.css(th, W, H)}
+                + _body_themed(scenes, total, th, meta)
+                + "\n<script>\n" + _timeline_themed(scenes, th) + "\n</script>\n</body></html>\n")
+    else:
+        html = (HEAD % {"W": W, "H": H, "title": esc(title or "덱"), "css": CSS}
+                + _body(scenes, total)
+                + "\n<script>\n" + _timeline(scenes) + "\n</script>\n</body></html>\n")
     (out_dir / "index.html").write_text(html, encoding="utf-8")
 
     return {"dir": str(out_dir), "scenes": len(scenes), "sec": total,
             "labels": sum(len(s["labels"]) for s in scenes),
-            "missing": missing}
+            "missing": missing, "theme": (th or {}).get("name") or "ivory",
+            "sync": deck.get("_sync") or {}}

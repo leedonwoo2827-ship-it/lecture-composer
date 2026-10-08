@@ -395,9 +395,22 @@ def fig_quota(job: Job, L: Dict[str, Any], sec_meta: Dict[str, Any]) -> int:
     return int(round(per * sec_meta["target_chars"] / tot))
 
 
-def fig_rule(need: int, have: int) -> str:
+def fig_rule(need: int, have: int, job: Optional[Job] = None) -> str:
     if need <= 0:
         return "새 도형은 그리지 않는다. `new_figs` 는 빈 배열 []."
+    from longform import theme
+    th = theme.get(job) if job is not None else None
+    if th:
+        # 영상 테마 — 새 도형도 처음부터 테마 스타일로(먹선·어긋난 그림자·파스텔 채움·투명 바탕)
+        fills = " ".join([th["table_head"], th["bases"][1]["bg"], th["bases"][2]["bg"], th["bases"][3]["bg"]])
+        return (f"이 섹션은 노트 도식이 {have}개뿐이라 **개념 도형 SVG {need}개를 새로 그려** `new_figs` 에 넣는다. "
+                f"새 도형 번호는 FIG {have + 1}부터 순서대로이고, 슬라이드의 `fig` 로 가리킨다. 규칙: "
+                "노트에 있는 개념·관계·절차·비교만 그린다(흐름도, 계층 트리, 2×2 표, 비교표, 벤다이어그램, 축 그래프 등). "
+                "viewBox 는 \"0 0 960 420\" 안팎의 가로형, **배경 rect 없음(투명)**, 글자는 한국어 font-size 18 이상·20자 이내. "
+                f"스타일: 모든 외곽선 stroke {th['ink']} 굵기 3·round, 상자는 rx 14 + 오른쪽 6·아래 7 비낀 같은 크기 "
+                f"{th['ink']} rect 를 뒤에 깔아 단색 그림자, 채움은 {fills} 를 돌려 쓰고 핵심 한 곳만 {th['accent']}(글자 흰색), "
+                f"글자 fill {th['ink']} 굵기 800(제목)/500(설명), 화살표는 살짝 휜 path + 열린 화살촉(marker 금지). "
+                "script·foreignObject·image·filter·외부 링크·font-family 지정 금지. 따옴표는 JSON 안이므로 \\\" 로 이스케이프한다.")
     return (f"이 섹션은 노트 도식이 {have}개뿐이라 **개념 도형 SVG {need}개를 새로 그려** `new_figs` 에 넣는다. "
             f"새 도형 번호는 FIG {have + 1}부터 순서대로이고, 슬라이드의 `fig` 로 가리킨다. 규칙: "
             "노트에 있는 개념·관계·절차·비교만 그린다(흐름도, 계층 트리, 2×2 표, 비교표, 벤다이어그램, 축 그래프 등). "
@@ -487,7 +500,7 @@ def build_section(job: Job, L: Dict[str, Any], i: int, sec_meta: Dict[str, Any],
     tpl = PROMPT.read_text(encoding="utf-8").replace("{course_role}", crs["role"])
     prompt = tpl.format(
         lecture_label=f"{label} — {L['title']}", section_title=sec.title, position=pos,
-        position_rule=rule, fig_rule=fig_rule(need, len(figs)),
+        position_rule=rule, fig_rule=fig_rule(need, len(figs), job),
         source_rule=SCRIPT_RULE if has_script else NOTE_RULE, enrich_rule=enrich_rule(job),
         target_chars=target, target_slides=max(3, round(target / 220)),
         section_id=sec.id, section_text=text)
