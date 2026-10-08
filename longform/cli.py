@@ -20,6 +20,7 @@
   claim          팀 분담       --only L03,L04 → 이 PC 사람(local.json me)이 맡는다 / release 로 놓기
   me             내 이름        --note "홍길동" → local.json (이 PC 를 쓰는 사람)
   status         강별 진행 상황
+  import-site    원천 가져오기  문제집 사이트 내보내기(problems.js·theory/) → input/notes · input/rounds/mNN.json
   redraw         도식 다시 그리기  영상 테마(backplate.theme) 스타일로 원고 도식 SVG 를 Claude 가 새로 그림(캐시)
 """
 from __future__ import annotations
@@ -142,6 +143,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--per", help="decide: 과목별 강 수, 예: 3,7 또는 4+5+5+6")
     ap.add_argument("--target", type=int, help="decide: 강 길이(분)")
     ap.add_argument("--note", default="", help="decide: 이렇게 정한 이유(brief.md 에 남는다)")
+    ap.add_argument("--dir", default="", help="import-site: 사이트 내보내기 폴더(problems.js · theory/)")
     a = ap.parse_args(argv)
 
     from longform.config import default_job
@@ -176,6 +178,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif cmd == "examples":
         from longform import s1_curriculum
         s1_curriculum.refresh_examples(job)
+    elif cmd == "import-site":
+        if not a.dir:
+            ap.error("import-site 에는 --dir 가 필요합니다 (예: --dir _assets\\sqld-2627)")
+        from longform import import_site
+        import_site.run(job, a.dir)
     elif cmd == "redraw":
         from longform import redraw
         redraw.run(job, only)

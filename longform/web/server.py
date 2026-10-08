@@ -380,6 +380,12 @@ def import_folder(j, folder: str) -> Dict[str, Any]:
     if not src.is_dir():
         raise HTTPException(400, f"가져올 폴더가 없습니다: {src}")
     n = {"notes": 0, "scripts": 0, "rounds": 0, "review": 0}
+    # ★ 문제집 사이트 내보내기(problems.js · theory/summary_*.js)면 형식을 바꿔 넣는다(longform/import_site.py)
+    from longform import import_site
+    if import_site.is_site_export(src):
+        got = import_site.convert(j, src)
+        n["notes"] += got.get("notes", 0)
+        n["rounds"] += got.get("rounds", 0)
     # ★ 문항 앱의 **책 폴더**를 통째로 가리켜도 된다(구조는 docs/원천-가져오기.md):
     #   _rounds/mNN.json → 문항,  03/summary_*.html → 요약노트,  _book.json → 품목 코드(pd)
     files: List[Path] = []

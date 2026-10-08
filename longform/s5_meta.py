@@ -98,8 +98,7 @@ def build(job: Job, L: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         *[f"- {s['title']}" for s in L["sections"]],
     ]
     if L.get("examples"):
-        lines += ["", f"기출 맛보기 {len(L['examples'])}문항: "
-                  + ", ".join(f"모의 {e['round']}회 {e['no']}번" for e in L["examples"])]
+        lines += ["", f"기출 맛보기 {len(L['examples'])}문항"]
     if yt.get("site_url"):
         lines += ["", f"문제집·모의고사 750제·요약노트: {yt['site_url']}"]
     if ch.get("chapters"):

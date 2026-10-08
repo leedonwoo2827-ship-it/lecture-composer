@@ -162,10 +162,12 @@ def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], L
                 b.append('<div class="points"><b>핵심 정리</b><ul>' + "".join(f"<li>{esc(x)}</li>" for x in s["points"]) + "</ul></div>")
             if (s.get("caution") or "").strip():
                 b.append(f'<p class="caution"><b>주의</b> {esc(s["caution"])}</p>')
-        for e in [e for e in (L.get("examples") or []) if e["anchor"].startswith(sec.id)]:
+        for k, e in enumerate(L.get("examples") or [], 1):
+            if not e["anchor"].startswith(sec.id):
+                continue
             q = rounds.get((e["round"], e["no"]))
             if q:
-                b.append(example_box(q, f"기출 맛보기 — 모의 {e['round']}회 {e['no']}번"))
+                b.append(example_box(q, f"기출 맛보기 {k}"))
     last = parts[-1][1] if parts else {}
     if last.get("wrap"):
         b.append('<div class="wrap"><b>이 장의 핵심</b><ul>' + "".join(f"<li>{esc(x)}</li>" for x in last["wrap"]) + "</ul></div>")

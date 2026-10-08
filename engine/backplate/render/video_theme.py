@@ -211,6 +211,10 @@ body{{width:{W}px;height:{H}px;background:{t['paper']};overflow:hidden;
 .pager{{position:absolute;left:96px;bottom:60px;display:flex;gap:13px;z-index:6}}
 .pager i{{width:9px;height:9px;border-radius:50%;background:{t['ink']};opacity:.22}}
 .pager i.on{{opacity:1;transform:scale(1.25)}}
+.prog{{position:absolute;left:96px;bottom:64px;width:420px;height:3px;border-radius:2px;
+  background:rgba(31,29,43,.16);z-index:6}}
+.prog i{{position:absolute;left:0;top:0;height:100%;border-radius:2px;background:var(--accent)}}
+.clip.deep .prog{{background:rgba(244,241,234,.22)}}
 /* 제목 덩어리 — 키커 · 제목(둘째 줄 강조) · 물결 밑줄 */
 .tblock{{position:absolute;left:124px;top:150px;width:var(--tw);z-index:6}}
 .kick{{font-weight:700;font-size:21px;letter-spacing:.32em;color:{t['ink_sub']};margin-bottom:22px}}
@@ -335,9 +339,15 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
         p.append(f'<div class="lbl" data-i="{j}" style="--lx:{l["x"]}%;--ly:{l["y"]}%;--lw:{l["w"]}%">'
                  f'<em>{num}</em><b>{head}</b>{sub}</div>')
     # ⑦ 아래 — 페이저 · 쪽수
-    dots = "".join(f'<i class="{"on" if k == i else ""}"></i>' for k in range(min(n, 24)))
-    p.append(f'<div class="pager">{dots}</div>')
-    p.append(f'<div class="pg"><b>{i + 1:02d}</b> / {n:02d}</div>')
+    # 쪽수 — longform 이 실은 강 전체 번호(look.page/pages)가 있으면 그것. 섹션을 이어 붙여도 이어진다
+    cur, tot = int(look.get("page") or i + 1), int(look.get("pages") or n)
+    if tot <= 24:
+        dots = "".join(f'<i class="{"on" if k == cur - 1 else ""}"></i>' for k in range(tot))
+        p.append(f'<div class="pager">{dots}</div>')
+    else:
+        # 장이 많으면 점 대신 가는 진행선 — 회색 괘선 위로 강조색이 강 전체 비율만큼
+        p.append(f'<div class="prog"><i style="width:{100 * cur / tot:.2f}%"></i></div>')
+    p.append(f'<div class="pg"><b>{cur:02d}</b> / {tot:02d}</div>')
     return "\n".join(p)
 
 

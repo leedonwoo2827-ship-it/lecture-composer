@@ -190,6 +190,26 @@ def labels_themed(slide: Dict[str, Any], has_bg: bool, sub_band: bool, th: Dict[
              "say_i": 1 + round(i * ns / max(1, len(bl))), "cell": "line"} for i, b in enumerate(bl)]
 
 
+def lecture_span(job: Job, L: Dict[str, Any], sec_i: int, mode: str) -> Dict[str, int]:
+    """강 전체 기준 번호의 출발점 — 섹션(≈10분)을 따로 구워 이어 붙여도 쪽수·키커 번호·바탕 순서가 이어지게.
+
+    앞 섹션들의 원고(JSON)에서 장 수·소주제 수·덩이 수를 누적한다. 표지는 첫 섹션, 맺음은 끝 섹션에만 센다.
+    원고가 아직 없는 섹션은 0으로 센다(그 섹션을 구울 때는 이미 있다 — make 는 강 단위로 집필 뒤 렌더).
+    """
+    md = job.manuscripts_dir / L["id"]
+    n = len(L["sections"])
+    per = int(job.get("backplate.bg_per_section", 3))
+    pages, groups, chunks = [], [], []
+    for j, sec in enumerate(L["sections"]):
+        man = read_json(md / f"{sec['id']}.json", {}) or {}
+        gs = man.get("groups") or []
+        pages.append(sum(len(g.get("slides") or []) for g in gs) + (j == 0) + (j == n - 1))
+        groups.append(len(gs))
+        chunks.append(len(chunk_groups(gs, per, man.get("title", ""))) if (mode == "section" and gs) else len(gs))
+    return {"page_off": sum(pages[:sec_i]), "page_total": sum(pages),
+            "group_off": sum(groups[:sec_i]), "chunk_off": sum(chunks[:sec_i])}
+
+
 def object_prompt(group_title: str, lecture_title: str, th: Dict[str, Any]) -> str:
     """테마 판의 오브젝트 — 배경이 아니라 **투명 바탕의 사물 하나**. 바탕·덩어리는 hyper 가 그린다."""
     pal = ", ".join(f"{k} {th[k]}" for k in ("accent", "cobalt", "mustard", "sage", "deep"))
@@ -252,7 +272,7 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
             # ★ 표 도식 모양을 바꾸면(2026-10-02) 표가 든 섹션만 다시 렌더된다
             *(["table_v2"] if any((f or "").lstrip().lower().startswith("<table") for f in man.get("figs") or []) else []),
             # ★ 영상 테마를 바꾸면 섹션이 다시 렌더된다(그림은 캐시를 다시 쓴다)
-            *([f"theme:{th['name']}:2"] if th else []))
+            *([f"theme:{th['name']}:3", lecture_span(job, L, sec_i, mode)] if th else []))
     key = f"s3:{sid}"
     if not force and state.done(lid, key, h) and out_mp4.exists():
         log(f"{lid} {sid} 렌더 — 그대로")
@@ -343,7 +363,8 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
               if mode == "section" else man["groups"])
     chunk_of: Dict[str, int] = {s["id"]: ci for ci, g in enumerate(chunks) for s in g["slides"]}
     group_of: Dict[str, str] = {s["id"]: g["title"] for g in man["groups"] for s in g["slides"]}
-    gidx: Dict[str, int] = {g["title"]: gi for gi, g in enumerate(man["groups"], 1)}
+    span = lecture_span(job, L, sec_i, mode) if th else {"page_off": 0, "page_total": 0, "group_off": 0, "chunk_off": 0}
+    gidx: Dict[str, int] = {g["title"]: span["group_off"] + gi for gi, g in enumerate(man["groups"], 1)}
     figs = man.get("figs") or []
     if th:
         from longform import redraw
@@ -363,19 +384,32 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
         if th:
             gt = group_of.get(s["id"], "")
             ov["slides"][str(no)]["look"] = {
-                "chunk": chunk_of.get(s["id"], 0),
+                "chunk": span["chunk_off"] + chunk_of.get(s["id"], 0),
                 "kind": "card" if s.get("card") else "fig" if is_fig else "body",
                 "kicker": f"{gidx.get(gt, 1):02d} — {gt}" if gt else ""}
         if s.get("card"):
             # 문제 장 — 카드 이미지가 화면 전부다(SQL·그림·표·보기). 라벨은 끈다
-            card = (card_slide_themed(s["card"], th, 31, 16 if sub_band else 11) if th
-                    else fit_card(s["card"], 16 if sub_band else 5))
+            card = (card_slide_themed(s["card"], th) if th
+                    else fit_card(s["card"], 16))
             fig_jobs.append((card, img_dir / f"{no:03d}.png"))
             ov["slides"][str(no)]["labels"] = []
         elif is_fig:
             fig = figs[int(s["fig"]) - 1]
             fig_jobs.append((svg_slide_themed(fig, th, 31, 79 if not sub_band else 80) if th else
                              svg_slide(fig, bottom_pct=64 if sub_band else 74), img_dir / f"{no:03d}.png"))
+    if th:
+        # 쪽수 — 강 전체 기준(표지·맺음 포함, 빠지는 장 제외). 이음매에서 「12/12 → 01/09」로 튀지 않게
+        k = 0
+        for sl in outline:
+            d = ov["slides"].setdefault(str(sl["no"]), {})
+            if d.get("drop"):
+                continue
+            k += 1
+            lk = d.setdefault("look", {})
+            if sl.get("kind") in ("cover", "closing"):
+                lk.setdefault("chunk", span["chunk_off"])
+            lk["page"] = span["page_off"] + k
+            lk["pages"] = max(span["page_total"], span["page_off"] + k)
     bp.helper_json("override", pid, ov)
 
     # 4) 내레이션(data-say) — 표지/맺음 외에는 Claude 를 부르지 않는다

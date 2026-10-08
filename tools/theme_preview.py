@@ -44,7 +44,7 @@ TABLE = ("<table><tr><th>연산자</th><th>결과</th><th>중복 행</th></tr>"
          "<tr><td>INTERSECT</td><td>양쪽에 모두 있는 행</td><td>제거</td></tr>"
          "<tr><td>EXCEPT / MINUS</td><td>앞 결과에만 있는 행</td><td>제거</td></tr></table>")
 
-CARD = ('<div class="qc"><div class="qh">기출 · 모의 3회 12번</div>'
+CARD = ('<div class="qc"><div class="qh">기출 맛보기 · 문제 1</div>'
         '<div class="qq">다음 SQL 의 실행 결과로 반환되는 행의 수는?</div>'
         '<div class="qp"><pre>SELECT D.DEPT_NAME, COUNT(E.EMP_ID)\nFROM DEPT D\nLEFT OUTER JOIN EMP E\n  ON D.DEPT_ID = E.DEPT_ID\nGROUP BY D.DEPT_NAME;</pre>'
         '<p class="li">DEPT 는 4개 부서, EMP 는 그중 3개 부서에만 사원이 있다.</p></div>'
@@ -164,7 +164,7 @@ def main() -> int:
                 f = redraw_one(job, f)
             figs.append((svg_slide_themed(f, th, 31, 80) if th else svg_slide(f, bottom_pct=74), p))
         elif s["kind"] == "card":
-            figs.append((card_slide_themed(s["card"], th, 31, 11) if th else fit_card(s["card"], 5), p))
+            figs.append((card_slide_themed(s["card"], th) if th else fit_card(s["card"], 16), p))
     render_many(figs, theme=th["name"] if th else None)
 
     # 3) 오브젝트(테마) — 주제마다 하나, 표지·맺음은 빌려 쓴다

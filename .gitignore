@@ -36,3 +36,8 @@ _context/
 
 # 이 PC 전용 메모(과정·경로) — 올리지 않는다
 docs/_local/
+
+# 받아 둔 원천(회사 자료)·로컬 설정 — 올리지 않는다
+_assets/
+.claude/
+lecture-composer-danjeong/

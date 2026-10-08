@@ -36,7 +36,7 @@ def course(job: Job) -> Dict[str, str]:
 
 
 # 원고 조립 규칙(예시 대본·발음 보정 등)을 바꾸면 올린다 → 집필은 저장된 것을 재사용하고 원고만 다시 만든다
-MANUSCRIPT_VERSION = 4
+MANUSCRIPT_VERSION = 5
 CIRCLED = "①②③④⑤"
 SINO = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구", "십"]
 
@@ -263,10 +263,19 @@ def passage_say(passage: str) -> str:
     return re.sub(r"\s+", " ", strip_tags(t)).strip()
 
 
-def question_card(q: Dict[str, Any], rnd: int, no: int) -> str:
+# 기출 맛보기 순서 말 — 「첫 번째 문제」. 회차·번호(모의 N회 M번)는 화면·말에 쓰지 않는다
+#   (사용자 지시 2026-10-09: 출간본·사이트의 회차·번호와 다를 수 있다 — 그 강 안의 순번만)
+_NTH = ["첫", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열"]
+
+
+def example_label(k: int) -> str:
+    return f"기출 맛보기 · 문제 {k}"
+
+
+def question_card(q: Dict[str, Any], k: int) -> str:
     choices = q.get("choices") or []
     return ('<div class="qc">'
-            f'<div class="qh">기출 · 모의 {rnd}회 {no}번</div><div class="qq">{html.escape(q.get("question", ""))}</div>'
+            f'<div class="qh">{example_label(k)}</div><div class="qq">{html.escape(q.get("question", ""))}</div>'
             + (f'<div class="qp">{passage_html(q.get("passage") or "", q.get("assets") or [])}</div>' if q.get("passage") else "")
             + "<ol>" + "".join(f"<li>{html.escape(c)}</li>" for c in choices) + "</ol></div>")
 
@@ -288,7 +297,7 @@ def spoken(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
-def example_slides(q: Dict[str, Any], rnd: int, no: int) -> List[Dict[str, Any]]:
+def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
     """기출 맛보기 2장 — 문제 장(카드 이미지 + 강사식 읽기), 풀이 장(말 해설).
 
     ★ 지문을 글자 그대로 읽지 않는다(실측: "- (가) … — …「」" 를 다 읽어 어색했다). 기호는 말로 풀고,
@@ -315,16 +324,17 @@ def example_slides(q: Dict[str, Any], rnd: int, no: int) -> List[Dict[str, Any]]
     elif tags:
         key = f" 핵심은 {tags[0]}입니다."
     what = f"{stem}을 고르는 문제입니다" if stem.endswith("것") else f"{stem}, 이것을 묻는 문제입니다"
-    say_q = (f"기출 맛보기입니다. 모의고사 {rnd}회 {no}번, {what}.{key} "
+    nth = _NTH[k - 1] if 1 <= k <= len(_NTH) else str(k)
+    say_q = (f"기출 맛보기 {nth} 번째 문제입니다. {what}.{key} "
              "화면의 자료와 보기를 보면서 잠시 정답을 골라 보십시오.")
     expl = q.get("explanation") or ""
     first = re.split(r"(?<=[.다])\s+", expl.strip())
     say_a = q.get("explanation_speech") or expl
     return [
-        {"title": f"기출 맛보기 · 모의 {rnd}회 {no}번", "kind": "example-q",
+        {"title": example_label(k), "kind": "example-q",
          "bullets": body_q + [f"{CIRCLED[i]} {c}" for i, c in enumerate(choices[:5])],
          # ★ 문제 장은 카드 이미지로 굽는다(렌더 단계) — SQL 코드·그림·표가 라벨 글자로는 안 산다
-         "card": question_card(q, rnd, no),
+         "card": question_card(q, k),
          "say": say_q, "fig": None},
         {"title": f"정답 {CIRCLED[ans] if ans < 5 else ans + 1} · 풀이", "kind": "example-a",
          "bullets": [f"{CIRCLED[ans] if ans < 5 else ans + 1} {choices[ans]}" if ans < len(choices) else ""]
@@ -563,15 +573,18 @@ def build_section(job: Job, L: Dict[str, Any], i: int, sec_meta: Dict[str, Any],
     # 예시 문항 슬라이드를 근거 소주제 뒤에 붙인다(없으면 마지막 개념 group 뒤)
     by_sub = {g.get("sub_id"): g for g in groups}
     concept = [g for g in groups if g.get("sub_id") not in ("intro", "wrap")]
+    # k = 그 강 안의 순번 — 강의 예시 목록(L["examples"]) 순서. 섹션이 나뉘어도 번호가 이어진다
+    order = {(x["round"], x["no"]): i for i, x in enumerate(L.get("examples") or [], 1)}
     for e in exs:
         q = rounds.get((e["round"], e["no"]))
         if not q:
             continue
+        k = order.get((e["round"], e["no"]), 1)
         tgt = by_sub.get(e["anchor"]) or (concept[-1] if concept else None)
         if tgt is None:
             tgt = {"sub_id": e["anchor"], "title": "기출 맛보기", "slides": []}
             groups.append(tgt)
-        tgt["slides"].extend(example_slides(q, e["round"], e["no"]))
+        tgt["slides"].extend(example_slides(q, k))
     # wrap 은 항상 맨 뒤
     groups = [g for g in groups if g.get("sub_id") != "wrap"] + [g for g in groups if g.get("sub_id") == "wrap"]
 

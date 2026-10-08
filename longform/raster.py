@@ -188,9 +188,15 @@ def svg_slide_themed(svg: str, th: Dict[str, Any], top_pct: float = 30, bottom_p
     return f"<div style='{pos};display:flex;align-items:center;justify-content:center'>{body}</div>"
 
 
-def card_slide_themed(card_html: str, th: Dict[str, Any], top_pct: float = 24, bottom_pct: float = 5) -> str:
-    """기출 맛보기 문제 카드 — 테마 판. 글자 크기 자동 축소는 fit_card 와 같은 규칙."""
+CARD_BOTTOM_MIN = 16      # 카드 아래 끝 — 자막 띠·플레이어 조작바(아래 14%) 위. 보기 ③④가 가려졌다(2026-10-09)
+
+
+def card_slide_themed(card_html: str, th: Dict[str, Any], top_pct: float = 31,
+                      bottom_pct: float = CARD_BOTTOM_MIN) -> str:
+    """기출 맛보기 문제 카드 — 테마 판. 글자 크기 자동 축소는 fit_card 와 같은 규칙.
+    ★ 보기가 모두 짧으면(24자 이하) 2열로 놓아 세로를 아낀다 — 아래가 잘리는 것보다 낫다."""
     ink, acc = th["ink"], th["accent"]
+    bottom_pct = max(bottom_pct, CARD_BOTTOM_MIN)
     css = f"""
 @counter-style circled{{system:fixed;symbols:"①" "②" "③" "④" "⑤";suffix:"  "}}
 .qc{{position:absolute;left:6%;right:6%;top:{top_pct}%;bottom:{bottom_pct}%;{_box_css(th)};
@@ -210,8 +216,12 @@ def card_slide_themed(card_html: str, th: Dict[str, Any], top_pct: float = 24, b
 .qc ol{{list-style:circled;margin:6px 0 0 0;padding-left:1.6em}}
 .qc li{{margin:7px 0;padding-left:.2em;word-break:keep-all}}
 .qc li::marker{{color:{acc};font-weight:900}}
+.qc ol.two{{display:grid;grid-template-columns:1fr 1fr;column-gap:48px}}
+.qc ol.two li{{display:list-item}}
 """
     return (f"<style>{css}</style>{remap_svg(card_html, th)}"
+            "<script>{const o=document.querySelector('.qc ol');if(o){const L=[...o.children].map(e=>e.textContent.trim().length);"
+            "if(L.length&&Math.max(...L)<=24)o.classList.add('two');}}</script>"
             # ★ 글꼴(SUIT)이 들어온 뒤 다시 잰다 — 폴백 글꼴로 재면 덜 줄어 아래 보기가 잘린다(2026-10-09 실측).
             #   render_many 가 fonts.ready 뒤에 window.__fit() 을 한 번 더 부른다.
             "<script>window.__fit=()=>{const c=document.querySelector('.qc');if(!c)return;let s=1;"
