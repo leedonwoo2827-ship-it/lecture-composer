@@ -67,7 +67,14 @@ class Runner:
         fh.close()
 
     def stop(self) -> None:
-        if self.running():
+        """하위 프로세스 **트리째** 끈다. terminate() 는 맨 위 파이썬만 끄고 그 밑의 렌더 엔진·node(HyperFrames)·
+        크롬은 남겨, 다시 실행하면 같은 강을 두 렌더러가 같은 임시 폴더로 동시에 구웠다(2026-10-09: 하나가 깨짐)."""
+        if not self.running():
+            return
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(self.proc.pid), "/T", "/F"],
+                           capture_output=True, check=False)
+        else:
             self.proc.terminate()
 
     def info(self) -> Dict[str, Any]:
