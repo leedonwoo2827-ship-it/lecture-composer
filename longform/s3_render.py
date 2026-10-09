@@ -496,6 +496,15 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
         raise SystemExit(f"[error] {lid} {sid} 모션 mp4 가 없습니다: {pdir / '11_완성'}")
     parts.mkdir(parents=True, exist_ok=True)
     shutil.copy2(mp4s[-1], out_mp4)
+    # ★ 엔진 쪽 완성본은 parts 로 복사한 뒤 지운다 — 같은 영상이 세 벌(엔진·parts·강) 쌓여 20강이면 30GB 가 넘고,
+    #   강 하나를 굽는 동안 프레임 임시 파일이 30GB 를 더 쓴다(2026-10-09 실측: 28분 강 45,000프레임).
+    #   다시 렌더할 때는 엔진이 새로 굽고, 렌더를 건너뛸 때는 parts 사본만 본다. 남기려면 backplate.keep_motion=true
+    if not job.get("backplate.keep_motion", False):
+        for m in mp4s:
+            try:
+                m.unlink()
+            except OSError:
+                pass
 
     # 7) 이어붙이기용 타이밍 — s11(자막 시각)과 s8(덱: drop·오디오 길이)
     deck = read_json(pdir / "10_덱" / "deck.json", {}) or {}
