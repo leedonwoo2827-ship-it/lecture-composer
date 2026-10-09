@@ -207,7 +207,7 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
     files: List[Path] = []
     chapters: List[Dict[str, str]] = []
     # 책에만 더 싣는 문항 — 절마다 N개(영상 문항 밖), 책 전체에서 한 번씩만
-    book_extra = int(job.get("book_export.examples_per_section", 6))
+    book_extra = int(job.get("book_export.examples_per_section", 10))
     book_used: set = set()
     for sno in sorted({L["subject_no"] for L in cur["lectures"]}):
         note: Optional[Note] = by_sub.get(int(sno))

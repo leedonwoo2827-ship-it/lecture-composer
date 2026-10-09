@@ -126,7 +126,7 @@ def refresh_examples(job: Job) -> Path:
         raise SystemExit("[error] curriculum.json 이 없습니다 — 먼저 plan")
     c = job.get("curriculum", {})
     cps = float(c.get("chars_per_sec", 5.5))
-    n_ex = int(c.get("examples_per_lecture", 10))
+    n_ex = examples_per_lecture(job)
     budget = (float(c.get("examples_budget_min", 14)) * 60) if n_ex > 0 else 0.0
     rd = job.path(job.get("inputs.rounds_dir"))
     rounds = load_rounds(rd) if rd and rd.exists() else {}
@@ -153,6 +153,14 @@ def refresh_examples(job: Job) -> Path:
 SLIDE_GAP = 0.45      # 장 사이 숨(render/hyper.py TAIL_SEC)
 
 
+def examples_per_lecture(job: Job) -> int:
+    """영상에 넣는 기출 맛보기 수. curriculum.video_examples=false 면 0 — 영상은 개념만, 문제는 교재에만
+    (사용자 결정 2026-10-09: 「종합본 강의에는 문제가 안 나와도 된다, 책에는 자주 나와도 된다」)."""
+    if not job.get("curriculum.video_examples", True):
+        return 0
+    return int(job.get("curriculum.examples_per_lecture", 10))
+
+
 def fill_to_target(job: Job, lid: str) -> int:
     """집필이 끝난 강의 **실제 원고 길이**를 재서, 강 길이 목표에 모자란 만큼 기출 맛보기를 더 넣는다.
 
@@ -160,7 +168,7 @@ def fill_to_target(job: Job, lid: str) -> int:
       문항 하나 ≈ 37.5초(문제 장 + 풀이 장, L01·L02 실측). 강의 섹션들이 가리키는 문항 중, 다른 강이 아직 안 쓴 것만.
     ★ 끄기: 목표서 curriculum.fill_with_examples=false. 돌려준 값 = 더 넣은 문항 수(0 이면 그대로).
     """
-    if not job.get("curriculum.fill_with_examples", True):
+    if not job.get("curriculum.fill_with_examples", True) or not job.get("curriculum.video_examples", True):
         return 0
     out = job.dir / "curriculum.json"
     doc = read_json(out)
@@ -212,7 +220,7 @@ def build(job: Job) -> Dict[str, Any]:
     cps = float(c.get("chars_per_sec", 5.5))
     target_sec = float(c.get("target_min", 35)) * 60
     fixed_sec = float(c.get("fixed_sec", 180))
-    n_ex = int(c.get("examples_per_lecture", 10))
+    n_ex = examples_per_lecture(job)
     per_subject = {int(k): int(v) for k, v in (c.get("lectures_per_subject") or {}).items()}
 
     notes, scripts = load_inputs(job)

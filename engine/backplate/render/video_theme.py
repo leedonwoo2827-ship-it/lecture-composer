@@ -69,6 +69,7 @@ THEMES: Dict[str, Dict[str, Any]] = {
         "obj_box_cover": (54, 13, 42, 74),
         "sheen": False,
         "header": False,           # 위 머리말(로고타입·캡션) — 끔
+        "ambient": False,          # 장 내내 움직이는 것(숨쉬기·부유·흔들림) — 끔(디스크·렌더 시간)
         "sync": True,              # render/sync.py - labels appear when their words are spoken
         "label_reveal": "type",    # type = head typed out at speech pace | rise
         # 글이 많은 장(라벨 글자 수 ≥ dense_chars)의 사물 처리: keep · shrink · hide · backdrop · recede
@@ -494,7 +495,10 @@ def timeline(sc: Dict[str, Any], sid: str, lbl_dur: float, lbl_rise: float, sec,
     # 덩어리 — 커지며 들어오고(0.9s) 장 내내 아주 느리게 숨쉰다
     L.append(f'tl.from("{q(".blob")}", {{ scale: .82, autoAlpha: 0, duration: .9, ease: "power3.out", '
              f'stagger: .12 }}, {s0:.3f});')
-    breath = max(0.0, dur - 1.0)
+    # ★ 상시 움직임(덩어리 숨쉬기·사물 부유·장식 흔들림)은 기본 끔 — 장 내내 모든 프레임이 달라져 렌더러의
+    #   「같은 프레임 재사용」이 안 듣고, 28분 강에 프레임 임시 파일이 50GB 가까이 쌓여 디스크가 찼다(2026-10-09 L03).
+    #   켜려면 테마 ambient=True. 등장(그려지기·타이핑·붓질)은 그대로다.
+    breath = max(0.0, dur - 1.0) if (theme or {}).get("ambient") else 0.0
     if breath > 2:
         L.append(f'tl.to("{q(".blob.b1")}", {{ scale: 1.035, rotation: 1.2, duration: {breath / 2:.3f}, '
                  f'ease: "sine.inOut", yoyo: true, repeat: 1 }}, {s0 + .9:.3f});')
