@@ -162,6 +162,7 @@ def main() -> int:
                 from longform.redraw import redraw_one
                 job = load_job("sqld-danjeong-sample")
                 f = redraw_one(job, f)
+            s["fig_live"] = f                     # 화면에서 그려지듯 — look.fig 로 싣는다(렌더와 같은 길)
             figs.append((svg_slide_themed(f, th, 31, 80) if th else svg_slide(f, bottom_pct=74), p))
         elif s["kind"] == "card":
             figs.append((card_slide_themed(s["card"], th) if th else fit_card(s["card"], 16), p))
@@ -193,6 +194,8 @@ def main() -> int:
         if th:
             d["look"] = {"chunk": s["chunk"], "kind": s["kind"],
                          "kicker": f"{s['gi']:02d} — {s['group']}" if s.get("group") else ""}
+            if s.get("fig_live"):
+                d["look"]["fig"] = s["fig_live"]
         slides.append(d)
     deck = {"project": {"video_theme": a.theme if th else "", "theme_logo": "SQLD",
                         "theme_caption": "SQLD 종합본 — L03"}, "slides": slides}

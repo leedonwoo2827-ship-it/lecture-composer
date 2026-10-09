@@ -353,7 +353,7 @@ def _body_themed(scenes: List[Dict[str, Any]], total: float, th: Dict[str, Any],
     from render import video_theme
     p: List[str] = [f'<div id="root" data-composition-id="main" data-start="0" '
                     f'data-width="{W}" data-height="{H}" data-duration="{total:.3f}" '
-                    f'data-fps="{FPS}">']
+                    f'data-fps="{FPS}">', video_theme.ROUGH_DEF]
     n = len(scenes)
     for i, sc in enumerate(scenes):
         p.append(f'<section id="sc{sc["no"]:03d}" class="{video_theme.section_class(sc)}" '

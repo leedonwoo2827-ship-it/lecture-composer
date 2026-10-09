@@ -36,7 +36,7 @@ def course(job: Job) -> Dict[str, str]:
 
 
 # 원고 조립 규칙(예시 대본·발음 보정 등)을 바꾸면 올린다 → 집필은 저장된 것을 재사용하고 원고만 다시 만든다
-MANUSCRIPT_VERSION = 5
+MANUSCRIPT_VERSION = 6
 CIRCLED = "①②③④⑤"
 SINO = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구", "십"]
 
@@ -263,13 +263,10 @@ def passage_say(passage: str) -> str:
     return re.sub(r"\s+", " ", strip_tags(t)).strip()
 
 
-# 기출 맛보기 순서 말 — 「첫 번째 문제」. 회차·번호(모의 N회 M번)는 화면·말에 쓰지 않는다
-#   (사용자 지시 2026-10-09: 출간본·사이트의 회차·번호와 다를 수 있다 — 그 강 안의 순번만)
-_NTH = ["첫", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열"]
-
-
 def example_label(k: int) -> str:
-    return f"기출 맛보기 · 문제 {k}"
+    # ★ 영상에는 회차·번호를 남기지 않는다(사용자 지시 2026-10-09: 「모의 N회 M번」도 「문제 12」도 쓰지 않음 —
+    #   출간본·사이트의 번호와 다를 수 있다). k 는 말 순서(첫 문제/다음 문제)에만 쓴다. 교재(s8)는 「기출 맛보기 k」.
+    return "기출 맛보기"
 
 
 def question_card(q: Dict[str, Any], k: int) -> str:
@@ -324,8 +321,8 @@ def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
     elif tags:
         key = f" 핵심은 {tags[0]}입니다."
     what = f"{stem}을 고르는 문제입니다" if stem.endswith("것") else f"{stem}, 이것을 묻는 문제입니다"
-    nth = _NTH[k - 1] if 1 <= k <= len(_NTH) else str(k)
-    say_q = (f"기출 맛보기 {nth} 번째 문제입니다. {what}.{key} "
+    lead = "기출 맛보기입니다." if k <= 1 else "다음 문제입니다."
+    say_q = (f"{lead} {what}.{key} "
              "화면의 자료와 보기를 보면서 잠시 정답을 골라 보십시오.")
     expl = q.get("explanation") or ""
     first = re.split(r"(?<=[.다])\s+", expl.strip())

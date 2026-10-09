@@ -19,7 +19,7 @@ import random
 import re
 from html import escape as esc
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 APP = Path(__file__).resolve().parent.parent
@@ -63,11 +63,15 @@ THEMES: Dict[str, Dict[str, Any]] = {
         # 기존 SVG 도식 색을 테마 색으로(대소문자 무시)
         "svg_remap": {"#1F4E79": "#22314F", "#9DC3E6": "#BFD3EA", "#334155": "#1F1D2B",
                       "#fff3d6": "#F8E6B5", "#F4F8FC": "#F6F2EA"},
-        # 화면 비율(%) — 텍스트 열은 왼쪽, 오브젝트는 오른쪽
-        "text_w": 50, "obj_box": (54, 13, 42, 74),   # left, top, width, height
+        # 화면 비율(%) — 텍스트 열은 왼쪽, 사물은 오른쪽 아래에 작게(사용자 지시 2026-10-09: 반 크기·우하단).
+        #   강 표지·맺음(deep)만 큰 자리(obj_box_cover)를 쓴다.
+        "text_w": 68, "obj_box": (75, 46, 21, 37),   # left, top, width, height
+        "obj_box_cover": (54, 13, 42, 74),
         "sheen": False,
         "sync": True,              # render/sync.py - labels appear when their words are spoken
         "label_reveal": "type",    # type = head typed out at speech pace | rise
+        # 글이 많은 장(라벨 글자 수 ≥ dense_chars)의 사물 처리: keep · shrink · hide · backdrop · recede
+        "dense_chars": 70, "dense_mode": "keep", "obj_box_small": (80, 58, 16, 28),
     },
 }
 
@@ -150,9 +154,11 @@ def _star(x: float, y: float, s: float, fill: str, ink: str, rot: float) -> str:
         a = -math.pi / 2 + i * math.pi / 5
         r = 18 if i % 2 == 0 else 8
         pts.append(f"{25 + r * math.cos(a):.1f},{25 + r * math.sin(a):.1f}")
-    return (f'<svg class="dd pop" style="left:{x}px;top:{y}px;width:{s}px;height:{s}px;transform:rotate({rot}deg)" '
-            f'viewBox="0 0 50 50"><polygon points="{" ".join(pts)}" fill="{fill}" stroke="{ink}" '
-            f'stroke-width="3" stroke-linejoin="round"/></svg>')
+    # ★ 회전은 SVG 안쪽 <g> 로 — 바깥 요소에 CSS transform 을 주면 GSAP(scale·rotation)과 부딪혀
+    #   HyperFrames 린트가 막는다(2026-10-09 실측: 56 error)
+    return (f'<svg class="dd pop" style="left:{x}px;top:{y}px;width:{s}px;height:{s}px" '
+            f'viewBox="0 0 50 50"><g transform="rotate({rot:.1f} 25 25)"><polygon points="{" ".join(pts)}" '
+            f'fill="{fill}" stroke="{ink}" stroke-width="3" stroke-linejoin="round"/></g></svg>')
 
 
 def _squiggle(color: str, w: float = 260) -> str:
@@ -162,13 +168,74 @@ def _squiggle(color: str, w: float = 260) -> str:
             f'stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 
-def _arrow(x: float, y: float, ink: str, flip: bool) -> str:
-    sx = -1 if flip else 1
-    return (f'<svg class="dd" style="left:{x}px;top:{y}px;width:150px;height:90px;transform:scaleX({sx})" '
-            f'viewBox="0 0 150 90"><path class="ln" pathLength="1" d="M6 70 C40 10 95 6 132 38" fill="none" '
-            f'stroke="{ink}" stroke-width="3.5" stroke-linecap="round"/>'
-            f'<path class="ln" pathLength="1" d="M112 24 L134 40 L112 52" fill="none" stroke="{ink}" '
-            f'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+# ── 도식 — 그려지듯 나타난다(사용자 지시 2026-10-09: _context/section.mp4 0:30 처럼) ──────────────
+# PNG 로 구우면 통째로 뜰 수밖에 없다. 그래서 SVG 를 DOM 에 그대로 두고 **요소마다** 순서대로:
+#   선(상자·화살표·괘선) = stroke-dashoffset 1→0 으로 긋기  →  면 = fill-opacity 0→원래값  →  글자 = 나타남.
+#   표는 행이 위에서부터 하나씩.
+_DRAW_RE = re.compile(r"<(path|rect|line|polyline|polygon|circle|ellipse|text)\b([^>]*?)(/?)>", re.I)
+_SVG_ROOT_RE = re.compile(r"<svg\b([^>]*)>", re.I)
+
+
+def _add_class(attrs: str, cls: str) -> str:
+    if re.search(r'\bclass\s*=\s*"', attrs):
+        return re.sub(r'\bclass\s*=\s*"', f'class="{cls} ', attrs, count=1)
+    return f' class="{cls}"' + attrs
+
+
+def _xy(tag: str, attrs: str) -> Tuple[float, float]:
+    """요소의 대략 첫 좌표 — 그리는 순서(왼→오, 위→아래)를 정하는 데만 쓴다(그룹 transform 은 무시)."""
+    def a(name: str) -> Optional[float]:
+        m = re.search(rf'\b{name}\s*=\s*"\s*(-?[\d.]+)', attrs)
+        return float(m.group(1)) if m else None
+    if tag in ("rect", "text"):
+        return a("x") or 0.0, a("y") or 0.0
+    if tag == "line":
+        return a("x1") or 0.0, a("y1") or 0.0
+    if tag in ("circle", "ellipse"):
+        return a("cx") or 0.0, a("cy") or 0.0
+    m = re.search(r'\b(?:d|points)\s*=\s*"\s*[Mm]?\s*(-?[\d.]+)[\s,]+(-?[\d.]+)', attrs)
+    return (float(m.group(1)), float(m.group(2))) if m else (0.0, 0.0)
+
+
+def prep_fig(markup: str, th: Dict[str, Any]) -> Tuple[str, str, int]:
+    """도식 문자열 → (종류 svg|table, 손본 마크업, 그려질 요소 수)."""
+    m = (markup or "").strip()
+    if m.lower().startswith("<table"):
+        out = m.replace("<table", "<table class='tb'", 1)
+        return "table", out, max(1, out.lower().count("<tr"))
+    for a, b in (th.get("svg_remap") or {}).items():
+        m = re.sub(re.escape(a), b, m, flags=re.I)
+
+    def draw(mm: "re.Match") -> str:
+        tag, attrs, close = mm.groups()
+        txt = tag.lower() == "text"
+        attrs = _add_class(attrs, "dk dt" if txt else "dk dw")
+        x, y = _xy(tag.lower(), attrs)
+        attrs += f' data-o="{int(x // 90) * 100000 + int(y)}"'
+        if not txt and "pathlength" not in attrs.lower():
+            attrs += ' pathLength="1"'
+        return f"<{tag}{attrs}{close}>"
+
+    m = _DRAW_RE.sub(draw, m)
+
+    def root(mm: "re.Match") -> str:
+        attrs = re.sub(r'\s(width|height|preserveAspectRatio)\s*=\s*"[^"]*"', "", mm.group(1))
+        return f'<svg{_add_class(attrs, "rough figsvg")} preserveAspectRatio="xMidYMid meet">'
+
+    m = _SVG_ROOT_RE.sub(root, m, count=1)
+    return "svg", m, len(re.findall(r'class="dk ', m))
+
+
+def fig_html(markup: str, th: Dict[str, Any]) -> str:
+    kind, body, _ = prep_fig(markup, th)
+    return f'<div class="figbox {kind}">{body}</div>'
+
+
+# 손그림 흔들림(raster.ROUGH_DEF 와 같은 값) — 컴포지션에 한 번만 둔다
+ROUGH_DEF = ('<svg width="0" height="0" style="position:absolute"><filter id="rough" x="-2%" y="-2%" '
+             'width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency=".018" numOctaves="2" '
+             'seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.6" xChannelSelector="R" '
+             'yChannelSelector="G"/></filter></svg>')
 
 
 def _dots(x: float, y: float, ink: str) -> str:
@@ -197,7 +264,26 @@ body{{width:{W}px;height:{H}px;background:{t['paper']};overflow:hidden;
 .blob{{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform-origin:50% 50%}}
 .clip>img.obj{{position:absolute;object-fit:contain;display:block;z-index:3;
   filter:drop-shadow(10px 14px 0 rgba(31,29,43,.10))}}
+.clip>img.obj.back{{opacity:.26;filter:saturate(.55);z-index:2}}
+.blob.dim{{opacity:.38}}
 .clip>img.full{{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;z-index:3}}
+/* 도식 상자 — 먹선 카드 + 어긋난 단색 그림자(raster._box_css 와 같은 값). 아래 20% 는 자막 자리 */
+.figbox{{position:absolute;left:7%;right:7%;top:31%;bottom:20%;z-index:5;box-sizing:border-box;
+  background:{t['card_bg']};border:3px solid {t['card_line']};border-radius:22px;
+  box-shadow:9px 10px 0 {t['card_shadow']};padding:26px 36px;display:flex;align-items:center;justify-content:center}}
+.figbox svg.figsvg{{width:100%;height:100%;max-width:100%;max-height:100%;overflow:visible}}
+.figbox.svg .rough{{filter:url(#rough)}}
+.figbox svg text{{font-family:"{f}","Malgun Gothic",sans-serif}}
+.figbox .dw{{stroke-dasharray:1;stroke-dashoffset:1;fill-opacity:0}}
+.figbox .dt{{opacity:0}}
+.figbox .tb{{width:100%;border-collapse:collapse;font-size:28px;line-height:1.38;color:{t['ink']}}}
+.figbox .tb th{{background:{t['table_head']};font-weight:800;padding:12px 18px;text-align:left;
+  border-top:3px solid {t['ink']};border-bottom:3px solid {t['ink']}}}
+.figbox .tb td{{padding:11px 18px;border-bottom:1.5px solid rgba(31,29,43,.22);vertical-align:top;
+  word-break:keep-all;font-weight:500}}
+.figbox .tb tr:last-child td{{border-bottom:3px solid {t['ink']}}}
+.figbox .tb td:first-child{{font-weight:800}}
+.figbox .tb tr{{opacity:0}}
 .dd{{position:absolute;overflow:visible;z-index:4}}
 .ln{{stroke-dasharray:1;stroke-dashoffset:1}}
 /* 머리말 — 왼쪽 로고타입 · 오른쪽 자간 넓은 캡션 · 아래 페이지 */
@@ -249,13 +335,25 @@ h2.ttl .l2{{display:block;color:var(--accent)}}
 
 # ── 장 하나 ───────────────────────────────────────────────────────────────
 def _split_title(title: str) -> List[str]:
-    """제목을 두 줄로 — ' — ' · ': ' · ' · ' 에서 자른다. 둘째 줄이 강조색이다."""
-    for sep in (" — ", " - ", ": ", " · "):
-        if sep in title:
-            a, b = title.split(sep, 1)
-            if a.strip() and b.strip():
-                return [a.strip(), b.strip()]
+    """제목은 **한 줄**(사용자 지시 2026-10-09) — 둘로 가르면 둘째 줄이 도식·카드 위를 덮었다."""
     return [title]
+
+
+DENSE_MODES = ("keep", "shrink", "hide", "backdrop", "recede")
+
+
+def label_chars(sc: Dict[str, Any]) -> int:
+    return sum(len(l.get("head") or "") + len(l.get("sub") or "") for l in sc.get("labels") or [])
+
+
+def dense_mode(sc: Dict[str, Any], t: Dict[str, Any]) -> str:
+    """이 장에 쓸 방식. look.dense_mode 가 있으면 그것(장마다 손으로), 없으면 글자 수가 기준을 넘을 때 테마 기본."""
+    look = sc.get("look") or {}
+    if look.get("dense_mode") in DENSE_MODES:
+        return look["dense_mode"]
+    if label_chars(sc) >= int(t.get("dense_chars", 70)):
+        return t.get("dense_mode", "keep")
+    return "keep"
 
 
 def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: Dict[str, Any]) -> str:
@@ -275,7 +373,21 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
     p.append(f'<style>#sc{sc["no"]:03d}{{--bg:{bg};--accent:{accent};--tw:{t["text_w"]}%}}</style>')
 
     has_obj = bool(sc["image"]) and kind not in ("fig", "card")
-    ox, oy, ow, oh = t["obj_box"]
+    ox, oy, ow, oh = t["obj_box_cover"] if deep else t["obj_box"]
+    # 글이 많은 장 — 사물을 어떻게 할지(dense_mode): keep 그대로 · shrink 오른쪽 아래로 작게 ·
+    #   hide 빼기 · backdrop 흐리게 크게 깔아 배경처럼 · recede 처음엔 앞에, 라벨이 뜨면 뒤로 물러남
+    mode = dense_mode(sc, t) if has_obj and not deep else "keep"
+    lab_w = None
+    if mode == "shrink":
+        ox, oy, ow, oh = t.get("obj_box_small", (68, 52, 26, 32))
+        lab_w = 60
+    elif mode == "hide":
+        has_obj = False
+        lab_w = 84
+    elif mode in ("backdrop", "recede"):
+        lab_w = 84 if mode == "backdrop" else None
+        if mode == "backdrop":
+            ox, oy, ow, oh = (50, 4, 58, 96)
     # ① 덩어리 — 오브젝트 뒤 큰 것 하나, 모서리에서 삐져나온 작은 것 하나
     if kind in ("fig", "card"):
         p.append(_blob("b2", -60 + rnd.uniform(-30, 30), 1080 + rnd.uniform(-20, 30), 250, b["blob2"], seed + 2, False))
@@ -283,15 +395,22 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
         cx = (ox + ow / 2) / 100 * 1920 + rnd.uniform(-30, 30)
         cy = (oy + oh / 2) / 100 * 1080 + rnd.uniform(-20, 20)
         big = b["blob"] if not deep else t["accent"]
-        p.append(_blob("b1", cx, cy, 360 if has_obj else 300, big, seed + 1))
+        if mode == "hide":       # 사물이 없으면 큰 덩어리는 오른쪽 위 구석에 작게
+            cx, cy = 1920 + rnd.uniform(-60, -10), 120 + rnd.uniform(-20, 20)
+        r1 = {"shrink": 170, "hide": 280, "backdrop": 520}.get(mode, (360 if deep else 215) if has_obj else 300)
+        p.append(_blob("b1" + (" dim" if mode == "backdrop" else ""), cx, cy, r1, big, seed + 1))
         corner = rnd.choice([(-40, 1100), (1980, -30), (-50, -40)])
         p.append(_blob("b2", corner[0], corner[1], 230, b["blob2"] if not deep else t["cobalt"], seed + 2, False))
     # ② 그림 — 오브젝트(투명 PNG) 또는 도식/문제 카드 전면 PNG
-    if sc["image"]:
+    if kind == "fig" and look.get("fig"):
+        # 도식은 PNG 가 아니라 **살아 있는 SVG/표** — 선이 그어지고 면·글자가 차례로 채워진다(fig_html·timeline)
+        p.append(fig_html(look["fig"], t))
+    elif sc["image"]:
         if kind in ("fig", "card"):
             p.append(f'<img class="full" src="./img/{sc["no"]:03d}.png" alt="">')
-        else:
-            p.append(f'<img class="obj" src="./img/{sc["no"]:03d}.png" alt="" '
+        elif has_obj:
+            cls = {"backdrop": "obj back", "recede": "obj recede"}.get(mode, "obj")
+            p.append(f'<img class="{cls}" src="./img/{sc["no"]:03d}.png" alt="" '
                      f'style="left:{ox}%;top:{oy}%;width:{ow}%;height:{oh}%">')
     # ③ 낙서 장식 — 오브젝트 둘레(본문) / 오른쪽 위(도식)
     if kind in ("fig", "card"):
@@ -302,12 +421,12 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
         p.append(_sparkle(ax + rnd.uniform(-20, 40), ay + rnd.uniform(-10, 40), 46, ink))
         p.append(_star(ax + aw - 60 + rnd.uniform(-30, 10), ay + rnd.uniform(-30, 30), 62, t["mustard"], t["ink"],
                        rnd.uniform(-18, 18)))
-        if rnd.random() < .5:
-            p.append(_dots(ax + aw - 120, ay + ah + 10, ink))
-        else:
-            p.append(_circle_scribble(ax + aw - 170, ay + ah - 70, 170, 100, accent))
-        if has_obj and not deep and rnd.random() < .45:
-            p.append(_arrow(ax - 120, ay + ah * .55, ink, False))
+        if mode not in ("hide", "backdrop"):          # 사물 둘레 장식은 사물이 앞에 있을 때만
+            if rnd.random() < .5:
+                p.append(_dots(ax + aw - 120, ay + ah + 10, ink))
+            else:
+                p.append(_circle_scribble(ax + aw - 170, ay + ah - 70, 170, 100, accent))
+            # 화살표 낙서는 쓰지 않는다(사용자 지시 2026-10-09)
     p.append('<div class="grain"></div>')
     # ④ 머리말
     logo = meta.get("logo") or ""
@@ -336,7 +455,8 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
         head = esc(l["head"])
         if t.get("label_reveal") == "type":
             head = "".join(f"<i>{esc(c)}</i>" for c in l["head"]) + '<u class="caret"></u>'
-        p.append(f'<div class="lbl" data-i="{j}" style="--lx:{l["x"]}%;--ly:{l["y"]}%;--lw:{l["w"]}%">'
+        lw = max(l["w"], lab_w) if lab_w else l["w"]
+        p.append(f'<div class="lbl" data-i="{j}" style="--lx:{l["x"]}%;--ly:{l["y"]}%;--lw:{lw}%">'
                  f'<em>{num}</em><b>{head}</b>{sub}</div>')
     # ⑦ 아래 — 페이저 · 쪽수
     # 쪽수 — longform 이 실은 강 전체 번호(look.page/pages)가 있으면 그것. 섹션을 이어 붙여도 이어진다
@@ -376,8 +496,10 @@ def timeline(sc: Dict[str, Any], sid: str, lbl_dur: float, lbl_rise: float, sec,
         L.append(f'tl.to("{q(".blob.b1")}", {{ scale: 1.035, rotation: 1.2, duration: {breath / 2:.3f}, '
                  f'ease: "sine.inOut", yoyo: true, repeat: 1 }}, {s0 + .9:.3f});')
     # 오브젝트 — 살짝 기울어 떨어지듯 들어오고, 떠 있다
-    L.append(f'tl.from("{q("img.obj")}", {{ y: 40, rotation: -4, autoAlpha: 0, duration: .9, '
-             f'ease: "back.out(1.4)" }}, {s0 + .15:.3f});')
+    # 사물 — 붓으로 칠하듯 대각선으로 쓸며 드러난다(떨어지듯 들어오는 대신, 사용자 지시 2026-10-09)
+    L.append(f'tl.fromTo("{q("img.obj")}", {{ clipPath: "polygon(0% 0%, 0% 0%, -40% 100%, -40% 100%)" }}, '
+             f'{{ clipPath: "polygon(0% 0%, 140% 0%, 100% 100%, -40% 100%)", duration: 1.5, ease: "power1.inOut" }}, '
+             f'{s0 + .3:.3f});')
     if breath > 2:
         n = max(1, int(breath // 3.2))
         L.append(f'tl.to("{q("img.obj")}", {{ y: -12, rotation: 1.2, duration: {breath / (2 * n):.3f}, '
@@ -415,5 +537,38 @@ def timeline(sc: Dict[str, Any], sid: str, lbl_dur: float, lbl_rise: float, sec,
         else:
             L.append(f'tl.from("{sel}", {{ y: {lbl_rise}, autoAlpha: 0, duration: {lbl_dur}, ease: "power3.out" }}, {a0:.3f});')
             L.append(f'tl.from("{sel}>em", {{ x: -16, duration: {lbl_dur}, ease: "power3.out" }}, {a0:.3f});')
+    # 도식 — 문서 순서(대개 왼쪽→오른쪽, 위→아래)대로 그린다. 상자 선을 긋고 → 면을 채우고 → 글자.
+    #   전체 그리기 시간 = 요소당 0.22초(최소 3초), 장 길이의 60% 를 넘지 않게
+    look = sc.get("look") or {}
+    if look.get("kind") == "fig" and look.get("fig"):
+        fk, _, n = prep_fig(look["fig"], theme or {})
+        t0 = s0 + .9
+        span = min(max(3.0, n * .22), max(3.0, dur * .6))
+        step = span / max(1, n)
+        if fk == "svg":
+            # ★ 그리는 순서 = **화면 위치**(왼→오, 같은 열이면 위→아래). Claude 가 쓴 SVG 는 상자를 다 쓰고
+            #   글자를 몰아 쓰므로 문서 순서대로 그리면 상자가 다 생긴 뒤에야 글자가 나온다(2026-10-09 캡처).
+            #   열 폭 90 단위로 묶어 상자·그림자·글자가 한 묶음으로 그려지게 한다.
+            L.append(f'(function(){{const E=[...document.querySelectorAll("#{sid} .figbox .dk")]'
+                     f'.sort((a,b)=>(+a.dataset.o||0)-(+b.dataset.o||0));'
+                     f'E.forEach((e,i)=>{{const t={t0:.3f}+i*{step:.4f};'
+                     # 글자는 왼쪽→오른쪽으로 써지듯(clip-path 가 글자 상자를 걷어 낸다)
+                     f'if(e.classList.contains("dt")){{tl.fromTo(e,{{opacity:1,clipPath:"inset(-20% 100% -20% 0%)"}},'
+                     f'{{clipPath:"inset(-20% 0% -20% 0%)",duration:.55,ease:"none"}},t);}}'
+                     f'else{{const fo=+(e.getAttribute("fill-opacity")||1);'
+                     # 선을 먼저 끝까지 긋고(1초) → 그다음 면을 채운다 — 「나타남」이 아니라 「그림」으로 보이게
+                     f'tl.to(e,{{strokeDashoffset:0,duration:1.0,ease:"power1.inOut"}},t);'
+                     f'tl.to(e,{{fillOpacity:fo,duration:.6,ease:"power1.out"}},t+.85);}}}});}})();')
+        else:
+            L.append(f'(function(){{const E=[...document.querySelectorAll("#{sid} .figbox tr")];'
+                     f'E.forEach((e,i)=>tl.fromTo(e,{{opacity:0,y:10}},{{opacity:1,y:0,duration:.45,ease:"power2.out"}},'
+                     f'{t0:.3f}+i*{max(.35, step):.3f}));}})();')
+    # recede — 첫 라벨이 뜰 때 사물이 흐려지며 뒤로 물러난다(글이 주인공이 되는 순간)
+    ats = [min(sec(l["at"]), max(0.0, dur - lbl_dur)) for l in sc["labels"]]
+    if ats:
+        t0 = s0 + max(1.2, min(ats))
+        L.append(f'tl.to("{q("img.recede")}", {{ opacity: .26, scale: 1.12, xPercent: 8, '
+                 f'filter: "saturate(.55)", duration: 1.2, ease: "power2.inOut" }}, {t0:.3f});')
+        L.append(f'tl.to("{q(".blob.b1")}", {{ opacity: .38, duration: 1.2, ease: "power2.inOut" }}, {t0:.3f});')
     # 없는 요소(오브젝트 없는 장·설명 없는 라벨 등)는 건너뛴다 — GSAP 경고·린트 잡음을 없앤다
     return [re.sub(r'^tl\.(\w+)\("([^"]+)"', r'has("\2") && tl.\1("\2"', x) for x in L]

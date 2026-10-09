@@ -62,9 +62,15 @@ def load_rounds(rounds_dir: Path) -> Dict[Tuple[int, int], Dict[str, Any]]:
 
 
 def question_seconds(q: Dict[str, Any], cps: float) -> float:
-    """예시 문항 2장(문제 읽기 + 정답 풀이)의 예상 길이."""
-    read = q.get("question", "") + q.get("passage", "") + "".join(q.get("choices") or [])
-    return (chars(read) + chars(q.get("explanation_speech") or q.get("explanation") or "") + 60) / cps
+    """예시 문항 2장(문제 장 + 풀이 장)의 예상 길이.
+
+    ★ 문제 장은 지문·보기를 **읽지 않는다**(s2 example_slides: 무엇을 묻는지 + 핵심 한 줄 + "골라 보십시오").
+      예전 어림은 지문·보기까지 다 읽는다고 쳐서 실제의 1.7배로 잡혔다(2026-10-09 L01 실측: 14문항 계획 15.7분 → 실제 9.4분).
+      문제 장 ≈ 문제 문장 + 45자, 풀이 장 = 해설, 장 사이 숨 2번(0.9초).
+    """
+    say_q = chars(q.get("question", "")) + 45
+    say_a = chars(q.get("explanation_speech") or q.get("explanation") or "") + 15
+    return (say_q + say_a) / cps + 0.9
 
 
 def _pick_examples(secs: List[Section], rounds: Dict, used: set, n: int) -> List[Dict[str, Any]]:
