@@ -68,6 +68,7 @@ THEMES: Dict[str, Dict[str, Any]] = {
         "text_w": 68, "obj_box": (75, 46, 21, 37),   # left, top, width, height
         "obj_box_cover": (54, 13, 42, 74),
         "sheen": False,
+        "header": False,           # 위 머리말(로고타입·캡션) — 끔
         "sync": True,              # render/sync.py - labels appear when their words are spoken
         "label_reveal": "type",    # type = head typed out at speech pace | rise
         # 글이 많은 장(라벨 글자 수 ≥ dense_chars)의 사물 처리: keep · shrink · hide · backdrop · recede
@@ -429,11 +430,13 @@ def scene_html(sc: Dict[str, Any], i: int, n: int, theme: Dict[str, Any], meta: 
             # 화살표 낙서는 쓰지 않는다(사용자 지시 2026-10-09)
     p.append('<div class="grain"></div>')
     # ④ 머리말
-    logo = meta.get("logo") or ""
-    if logo:
-        p.append(f'<div class="logo">{esc(logo)}<i>.</i></div>')
-    if meta.get("caption"):
-        p.append(f'<div class="cap">{esc(meta["caption"])}</div>')
+    # 머리말(왼쪽 로고타입 · 오른쪽 캡션)은 쓰지 않는다(사용자 지시 2026-10-09) — 테마 header=True 일 때만
+    if t.get("header"):
+        logo = meta.get("logo") or ""
+        if logo:
+            p.append(f'<div class="logo">{esc(logo)}<i>.</i></div>')
+        if meta.get("caption"):
+            p.append(f'<div class="cap">{esc(meta["caption"])}</div>')
     # ⑤ 제목 덩어리
     title = sc.get("title") or ""
     if title:

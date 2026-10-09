@@ -272,7 +272,7 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
             # ★ 표 도식 모양을 바꾸면(2026-10-02) 표가 든 섹션만 다시 렌더된다
             *(["table_v2"] if any((f or "").lstrip().lower().startswith("<table") for f in man.get("figs") or []) else []),
             # ★ 영상 테마를 바꾸면 섹션이 다시 렌더된다(그림은 캐시를 다시 쓴다)
-            *([f"theme:{th['name']}:4", lecture_span(job, L, sec_i, mode)] if th else []))
+            *([f"theme:{th['name']}:5", lecture_span(job, L, sec_i, mode)] if th else []))
     key = f"s3:{sid}"
     if not force and state.done(lid, key, h) and out_mp4.exists():
         log(f"{lid} {sid} 렌더 — 그대로")
