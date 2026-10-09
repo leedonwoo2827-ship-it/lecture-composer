@@ -134,7 +134,9 @@ def write_section(job: Job, L: Dict[str, Any], i: int, sec: Section, man: Option
     return doc, figs
 
 
-def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], List[str]]], rounds: Dict) -> str:
+def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], List[str]]], rounds: Dict,
+                 book_extra: int = 0, book_used: set | None = None) -> str:
+    """강 하나의 교재 HTML. book_extra = 절마다 영상 문항 **밖에** 더 싣는 문항 수(책은 영상보다 문제가 많다)."""
     b = [f'<h2 class="lec">제{L["no"]}강 {esc(L["title"])}</h2>']
     first = parts[0][1] if parts else {}
     if first.get("goals"):
@@ -162,12 +164,27 @@ def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], L
                 b.append('<div class="points"><b>핵심 정리</b><ul>' + "".join(f"<li>{esc(x)}</li>" for x in s["points"]) + "</ul></div>")
             if (s.get("caution") or "").strip():
                 b.append(f'<p class="caution"><b>주의</b> {esc(s["caution"])}</p>')
-        for k, e in enumerate(L.get("examples") or [], 1):
+        k = 0
+        for e in L.get("examples") or []:
             if not e["anchor"].startswith(sec.id):
                 continue
             q = rounds.get((e["round"], e["no"]))
             if q:
+                k += 1
                 b.append(example_box(q, f"기출 맛보기 {k}"))
+        # ★ 책에는 문제를 더 싣는다(사용자 지시 2026-10-09) — 이 절의 요약노트 배지가 가리키는 문항 중
+        #   영상에 안 나온 것, 책 전체에서 아직 안 쓴 것. 영상 문항과 같은 번호 줄로 이어 센다.
+        if book_extra and rounds:
+            from longform.s1_curriculum import _pick_examples
+            used = set(book_used if book_used is not None else set())
+            used |= {(e["round"], e["no"]) for e in L.get("examples") or []}
+            for e in _pick_examples([sec], rounds, used, book_extra):
+                q = rounds.get((e["round"], e["no"]))
+                if q:
+                    k += 1
+                    b.append(example_box(q, f"기출 맛보기 {k}"))
+                    if book_used is not None:
+                        book_used.add((e["round"], e["no"]))
     last = parts[-1][1] if parts else {}
     if last.get("wrap"):
         b.append('<div class="wrap"><b>이 장의 핵심</b><ul>' + "".join(f"<li>{esc(x)}</li>" for x in last["wrap"]) + "</ul></div>")
@@ -189,6 +206,9 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
 
     files: List[Path] = []
     chapters: List[Dict[str, str]] = []
+    # 책에만 더 싣는 문항 — 절마다 N개(영상 문항 밖), 책 전체에서 한 번씩만
+    book_extra = int(job.get("book_export.examples_per_section", 6))
+    book_used: set = set()
     for sno in sorted({L["subject_no"] for L in cur["lectures"]}):
         note: Optional[Note] = by_sub.get(int(sno))
         if not note:
@@ -208,7 +228,7 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
                 doc, figs = write_section(job, L, i, sec, man, script_for(note, sc, sec), state, force)
                 parts.append((sec, doc, figs))
             if parts:
-                lh = lecture_html(L, parts, rounds)
+                lh = lecture_html(L, parts, rounds, book_extra, book_used)
                 body.append(lh)
                 chapters.append({"file": f"{L['id'].lower()}.xhtml", "title": f"제{L['no']}강 {L['title']}",
                                  "xhtml": xhtml_doc(L["title"], lh)})

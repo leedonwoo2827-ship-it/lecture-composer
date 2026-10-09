@@ -36,7 +36,7 @@ def course(job: Job) -> Dict[str, str]:
 
 
 # 원고 조립 규칙(예시 대본·발음 보정 등)을 바꾸면 올린다 → 집필은 저장된 것을 재사용하고 원고만 다시 만든다
-MANUSCRIPT_VERSION = 7
+MANUSCRIPT_VERSION = 8
 CIRCLED = "①②③④⑤"
 SINO = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구", "십"]
 
@@ -271,8 +271,9 @@ def example_label(k: int) -> str:
 
 def question_card(q: Dict[str, Any], k: int) -> str:
     choices = q.get("choices") or []
+    # ★ 칩(「기출 맛보기」)은 넣지 않는다 — 장 제목과 같은 말이 두 번 나왔다(사용자 지시 2026-10-09)
     return ('<div class="qc">'
-            f'<div class="qh">{example_label(k)}</div><div class="qq">{html.escape(q.get("question", ""))}</div>'
+            f'<div class="qq">{html.escape(q.get("question", ""))}</div>'
             + (f'<div class="qp">{passage_html(q.get("passage") or "", q.get("assets") or [])}</div>' if q.get("passage") else "")
             + "<ol>" + "".join(f"<li>{html.escape(c)}</li>" for c in choices) + "</ol></div>")
 

@@ -150,6 +150,63 @@ def refresh_examples(job: Job) -> Path:
     return out
 
 
+SLIDE_GAP = 0.45      # 장 사이 숨(render/hyper.py TAIL_SEC)
+
+
+def fill_to_target(job: Job, lid: str) -> int:
+    """집필이 끝난 강의 **실제 원고 길이**를 재서, 강 길이 목표에 모자란 만큼 기출 맛보기를 더 넣는다.
+
+    ★ 원고는 목표 분량보다 짧게 나오기도 한다(2026-10-09 L01: 25.1분/30분). 모자란 시간은 문제로 채운다 —
+      문항 하나 ≈ 37.5초(문제 장 + 풀이 장, L01·L02 실측). 강의 섹션들이 가리키는 문항 중, 다른 강이 아직 안 쓴 것만.
+    ★ 끄기: 목표서 curriculum.fill_with_examples=false. 돌려준 값 = 더 넣은 문항 수(0 이면 그대로).
+    """
+    if not job.get("curriculum.fill_with_examples", True):
+        return 0
+    out = job.dir / "curriculum.json"
+    doc = read_json(out)
+    L = next((x for x in (doc or {}).get("lectures", []) if x["id"] == lid), None)
+    if not L:
+        return 0
+    c = job.get("curriculum", {})
+    cps = float(c.get("chars_per_sec", 5.5))
+    target = float(c.get("target_min", 35)) * 60
+    md = job.manuscripts_dir / lid
+    total, n = 0.0, len(L["sections"])
+    for i, s in enumerate(L["sections"]):
+        man = read_json(md / f"{s['id']}.json", {}) or {}
+        if not man:
+            return 0                                   # 아직 집필 전 — 잴 수 없다
+        for g in man.get("groups") or []:
+            for sl in g.get("slides") or []:
+                total += chars(sl.get("say") or "") / cps + SLIDE_GAP
+        for key, here in (("cover", i == 0), ("outro", i == n - 1)):
+            cv = man.get(key) or {}
+            if here and cv.get("say"):
+                total += chars(cv["say"]) / cps + SLIDE_GAP
+    short = target - total
+    if short < 30:
+        return 0
+    rd = job.path(job.get("inputs.rounds_dir"))
+    rounds = load_rounds(rd) if rd and rd.exists() else {}
+    if not rounds:
+        return 0
+    notes, _ = load_inputs(job)
+    by_id = {s.id: s for nt in notes for s in nt.sections}
+    secs = [by_id[s["id"]] for s in L["sections"] if s["id"] in by_id]
+    used = {(e["round"], e["no"]) for X in doc["lectures"] for e in X.get("examples") or []}
+    extra = fit_examples(secs, rounds, used, int(short // 30) + 1, short, cps)
+    if not extra:
+        warn(f"{lid} {short / 60:.1f}분 모자라지만 더 넣을 문항이 없습니다(이 강의 근거 문항을 다 씀)")
+        return 0
+    L["examples"] = (L.get("examples") or []) + extra
+    p = L.setdefault("plan", {})
+    p["examples_sec"] = round(sum(question_seconds(rounds[(e["round"], e["no"])], cps) for e in L["examples"]))
+    p["filled"] = len(extra)
+    write_json(out, doc)
+    log(f"{lid} 원고 {total / 60:.1f}분 → {short / 60:.1f}분 모자라 기출 맛보기 {len(extra)}문항 추가(총 {len(L['examples'])})")
+    return len(extra)
+
+
 def build(job: Job) -> Dict[str, Any]:
     c = job.get("curriculum", {})
     cps = float(c.get("chars_per_sec", 5.5))

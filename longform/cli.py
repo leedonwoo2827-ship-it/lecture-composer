@@ -20,6 +20,7 @@
   claim          팀 분담       --only L03,L04 → 이 PC 사람(local.json me)이 맡는다 / release 로 놓기
   me             내 이름        --note "홍길동" → local.json (이 PC 를 쓰는 사람)
   status         강별 진행 상황
+  fill           시간 채우기    집필된 강이 강 길이보다 짧으면 모자란 만큼 기출 맛보기를 더 넣음(문항당 ~37초, make 는 자동)
   import-site    원천 가져오기  문제집 사이트 내보내기(problems.js·theory/) → input/notes · input/rounds/mNN.json
   redraw         도식 다시 그리기  영상 테마(backplate.theme) 스타일로 원고 도식 SVG 를 Claude 가 새로 그림(캐시)
 """
@@ -79,6 +80,9 @@ def make(job, only: Optional[List[str]], a) -> int:
         try:
             step = "집필"
             s2_manuscript.run(job, [lid], a.force, a.sections)
+            # 원고가 강 길이보다 짧으면 모자란 시간만큼 기출 맛보기를 더 넣고 원고를 다시 조립한다(집필은 재사용)
+            if not a.sections and s1_curriculum.fill_to_target(job, lid):
+                s2_manuscript.run(job, [lid], False, a.sections)
             step = "렌더"
             s3_render.run(job, [lid], a.force, a.sections)
             if not a.sections:
@@ -178,6 +182,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif cmd == "examples":
         from longform import s1_curriculum
         s1_curriculum.refresh_examples(job)
+    elif cmd == "fill":
+        # 집필된 강의 길이를 재서 모자란 만큼 기출 맛보기를 더 넣고 원고를 다시 조립한다(렌더는 따로)
+        from longform import s1_curriculum, s2_manuscript
+        from longform.util import read_json
+        ids = only or [L["id"] for L in (read_json(job.dir / "curriculum.json", {}) or {}).get("lectures", [])]
+        for lid in ids:
+            if s1_curriculum.fill_to_target(job, lid):
+                s2_manuscript.run(job, [lid], False, None)
     elif cmd == "import-site":
         if not a.dir:
             ap.error("import-site 에는 --dir 가 필요합니다 (예: --dir _assets\\sqld-2627)")
