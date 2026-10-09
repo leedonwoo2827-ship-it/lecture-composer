@@ -36,7 +36,7 @@ def course(job: Job) -> Dict[str, str]:
 
 
 # 원고 조립 규칙(예시 대본·발음 보정 등)을 바꾸면 올린다 → 집필은 저장된 것을 재사용하고 원고만 다시 만든다
-MANUSCRIPT_VERSION = 6
+MANUSCRIPT_VERSION = 7
 CIRCLED = "①②③④⑤"
 SINO = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구", "십"]
 
@@ -294,6 +294,20 @@ def spoken(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+_JAMO_NAME = {"ㄱ": "기역", "ㄴ": "니은", "ㄷ": "디귿", "ㄹ": "리을", "ㅁ": "미음", "ㅂ": "비읍", "ㅅ": "시옷", "ㅇ": "이응"}
+
+
+def jamo_read(text: str) -> str:
+    """해설의 보기 기호를 소리로 — 「(ㄱ)」→「, 기역」, 「ㄴ은」→「니은은」. 자막은 그대로 두고 발음(read)에만 쓴다.
+
+    ★ 사이트 문항에는 말 해설(explanation_speech)이 없어 글 해설을 그대로 읽힌다 → TTS 가 「(ㄴ)」을 엉뚱하게 읽었다
+      (2026-10-09 L01 실측: 풀이 장 4곳, 사용자 귀에는 「17번ㄴ」처럼 들림).
+    """
+    t = re.sub(r"\(\s*([ㄱ-ㅇ])\s*\)", lambda m: f", {_JAMO_NAME[m.group(1)]}", text or "")
+    # 앞에 음절이 붙지 않은 자음 하나 = 보기 기호(뒤에 조사 「은·의·이·:」가 와도 된다)
+    return re.sub(r"(?<![가-힣ㄱ-ㅎ])([ㄱ-ㅇ])(?![ㄱ-ㅎ])", lambda m: _JAMO_NAME[m.group(1)], t)
+
+
 def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
     """기출 맛보기 2장 — 문제 장(카드 이미지 + 강사식 읽기), 풀이 장(말 해설).
 
@@ -332,11 +346,12 @@ def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
          "bullets": body_q + [f"{CIRCLED[i]} {c}" for i, c in enumerate(choices[:5])],
          # ★ 문제 장은 카드 이미지로 굽는다(렌더 단계) — SQL 코드·그림·표가 라벨 글자로는 안 산다
          "card": question_card(q, k),
-         "say": say_q, "fig": None},
+         "say": say_q, "read": jamo_read(say_q), "fig": None},
         {"title": f"정답 {CIRCLED[ans] if ans < 5 else ans + 1} · 풀이", "kind": "example-a",
          "bullets": [f"{CIRCLED[ans] if ans < 5 else ans + 1} {choices[ans]}" if ans < len(choices) else ""]
                     + [x for x in first[:2] if x],
-         "say": say_a, "fig": None},
+         # 자막은 해설 그대로, 소리는 보기 기호를 말로(jamo_read)
+         "say": say_a, "read": jamo_read(say_a), "fig": None},
     ]
 
 
