@@ -14,6 +14,8 @@
   s6 publish     게시          YouTube Studio 자동 업로드(일부공개)
   s7 register    등록          사이트 youtube_map · review.html · 기록(statements.jsonl)
   s8 textbook    교재          교재(종합본) 원고 작성 — 요약노트 형식 과목별 HTML(+ md·PNG, epub 선택)  별칭: book
+  whiteboard     화이트보드(시험) 완성된 강을 손글씨 화이트보드 화면으로 다시 굽는다(같은 원고·음성·시간축)
+                               → out_wb/Lxx/Lxx.mp4  별칭: wb   (_new/whiteboard/wb_render.py)
   all            s1 → s7 (끝난 단계는 건너뜀. 책은 따로 s8)
   make           제작(무인)    강마다 집필 → 렌더 → 잇기, 끝나면 교재(s8). 메타·게시·등록은 하지 않음.
                                한 강이 실패해도 다음 강으로 넘어가고, 끝에 강별 결과를 정리한다(퇴근 후 돌리기용)
@@ -33,7 +35,7 @@ from typing import List, Optional
 from longform.config import load_job
 
 ALIAS = {"plan": "s1", "compose": "s2", "render": "s3", "stitch": "s4",
-         "meta": "s5", "publish": "s6", "register": "s7", "book": "s8", "textbook": "s8",
+         "meta": "s5", "publish": "s6", "register": "s7", "book": "s8", "textbook": "s8", "wb": "whiteboard",
          # 예전 이름도 받는다
          "curriculum": "s1", "manuscript": "s2", "upload": "s6"}
 
@@ -129,6 +131,49 @@ def make(job, only: Optional[List[str]], a) -> int:
     return 0 if len(ok) == len(result) else 1
 
 
+def whiteboard(job, only: Optional[List[str]], a) -> int:
+    """화이트보드형(시험) — 기존 섹션 mp4 의 음성을 그대로 쓰고 화면만 손글씨 화이트보드로 다시 굽는다."""
+    from longform.config import REPO
+    from longform.util import read_json
+    f = REPO / "_new" / "whiteboard" / "wb_render.py"
+    if not f.exists():
+        print(f"[error] {f} 가 없습니다")
+        return 2
+    argv = ["--job", job.name]
+    if only:
+        argv += ["--only", ",".join(only)]
+    if a.sections:                     # 강마다 앞 N개 섹션만(시험용)
+        cur = read_json(job.dir / "curriculum.json", {}) or {}
+        ids = [s["id"] for L in cur.get("lectures", []) if not only or L["id"] in only for s in L["sections"][:a.sections]]
+        argv += ["--sections", ",".join(ids)]
+    # ★ 따로 띄운다 — 같은 프로세스에서 불러오면 렌더 워커(ProcessPool)가 함수를 못 넘겨받는다(PicklingError)
+    import subprocess
+    return subprocess.call([sys.executable, str(f), *argv], cwd=str(REPO))
+
+
+def _patient(job, fn) -> None:
+    """한 단계 실행 — 실패했을 때 Claude 한도 때문이면 풀릴 때까지 기다렸다 같은 단계를 다시(끝난 것은 건너뜀).
+    렌더 엔진 안의 Claude(표지 문구·이미지 설계)가 한도에 걸린 경우를 잡는다. 한도가 아니면 그대로 실패."""
+    from longform.llm_wait import _probe, is_limit, wait_for_claude
+    from longform.util import log
+    while True:
+        try:
+            return fn()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception as e:  # noqa: BLE001
+            from longform.s3_render import CodexStopped
+            if isinstance(e, CodexStopped):
+                raise
+            msg = str(e)
+            text = msg if is_limit(msg) else _probe(job)     # 실패 문구에 없으면 짧은 확인 질문으로 본다
+            if not (text and is_limit(text)):
+                raise
+            log("Claude 한도 때문에 멈춘 것으로 보입니다 — 풀리면 같은 단계를 이어서 합니다")
+            if not wait_for_claude(job, text):
+                raise
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     for s in (sys.stdout, sys.stderr):
         try:
@@ -205,9 +250,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         s6_upload.login(job)
     elif cmd == "make":
         return make(job, only, a)
+    elif cmd == "whiteboard":
+        return whiteboard(job, only, a)
     elif cmd == "s8":
         from longform import s8_textbook
-        s8_textbook.run(job, only, a.force)
+        _patient(job, lambda: s8_textbook.run(job, only, a.force))
     elif cmd in ("s1", "s2", "s3", "s4", "s5", "s6", "s7", "all"):
         steps = ["s1", "s2", "s3", "s4", "s5", "s6", "s7"] if cmd == "all" else [cmd]
         # 팀 분담 — 남이 맡은 강은 이 PC 에서 돌리지 않는다
@@ -225,10 +272,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                 s1_curriculum.run(job, force=a.force and cmd == "s1")
             elif st == "s2":
                 from longform import s2_manuscript
-                s2_manuscript.run(job, only, a.force, a.sections)
+                _patient(job, lambda: s2_manuscript.run(job, only, a.force, a.sections))
             elif st == "s3":
                 from longform import s3_render
-                s3_render.run(job, only, a.force, a.sections)
+                _patient(job, lambda: s3_render.run(job, only, a.force, a.sections))
             elif st == "s4":
                 if a.sections:
                     print("[info] --sections 시험 모드에서는 이어붙이기를 건너뜁니다")

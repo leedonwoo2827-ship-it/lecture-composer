@@ -30,6 +30,7 @@ def rows(job: Job) -> List[Dict[str, Any]]:
             "render": sum(1 for s in L["sections"] if f"s3:{s['id']}" in lec),
             "stitch_sec": (lec.get("s4") or {}).get("sec"),
             "video": f"{lid}/{lid}.mp4" if (d / f"{lid}.mp4").exists() else "",
+            "wb_video": f"out_wb/{lid}/{lid}.mp4" if (job.dir / "out_wb" / lid / f"{lid}.mp4").exists() else "",
             "meta": bool(meta), "yt_title": meta.get("title", ""),
             "thumb": f"meta/{lid}.thumb.png" if (job.meta_dir / f"{lid}.thumb.png").exists() else "",
             "yt": (lec.get("yt") or {}).get("id", "") or ((claims.get(lid) or {}).get("yt") or {}).get("id", ""),

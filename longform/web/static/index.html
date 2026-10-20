@@ -13,7 +13,7 @@ header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:-.02em}header .
 header select,header button{font:inherit}
 .tabs{display:flex;gap:4px;margin-left:auto}.tabs button{background:transparent;border:0;color:#cfe0f0;padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600}
 .tabs button.on{background:#fff;color:var(--pri)}
-main{padding:18px 20px 220px;max-width:1500px;margin:0 auto}
+main{padding:18px 20px calc(var(--logh,200px) + 40px);max-width:1500px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
 .card h2{font-size:15px;margin:0 0 10px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -34,9 +34,22 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .pill.ok{background:#dcf2ee;color:var(--ok)}.pill.part{background:#fff3d6;color:var(--warn)}.pill.no{background:#f1f5f9;color:#94a3b8}
 .subj1{border-left:4px solid #1F4E79}.subj2{border-left:4px solid #0f766e}.subj3{border-left:4px solid #9a4d33}
 .mini{font-size:12px;color:var(--sub)}a{color:var(--pri)}
-#logbox{position:fixed;left:0;right:0;bottom:0;height:200px;background:#0f172a;color:#d1fae5;font:12px/1.5 Consolas,monospace;
+#logbox{position:fixed;left:0;right:0;bottom:0;height:var(--logh,200px);background:#0f172a;color:#d1fae5;font:12px/1.5 Consolas,monospace;
   padding:8px 14px;overflow:auto;white-space:pre-wrap;border-top:3px solid var(--pri);z-index:6}
-#logbar{position:fixed;right:16px;bottom:206px;z-index:7;display:flex;gap:6px;align-items:center}
+#logbar{position:fixed;right:16px;bottom:calc(var(--logh,200px) + 6px);z-index:7;display:flex;gap:6px;align-items:center}
+#loggrip{position:fixed;left:0;right:0;bottom:calc(var(--logh,200px) - 4px);height:12px;cursor:ns-resize;z-index:8;display:flex;justify-content:center;align-items:center}
+#loggrip::after{content:"";width:64px;height:5px;border-radius:9px;background:#9DC3E6;opacity:.85}
+#loggrip:hover::after{background:#fff}
+#runstate.busy{background:#b45309}#runstate.wait{background:#c2410c}#runstate.done{background:#0f766e}#runstate.fail{background:#b91c1c}
+.tool{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:rgba(255,255,255,.12);padding:3px 10px;border-radius:999px;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#94a3b8;display:inline-block}.dot.on{background:#4ade80}.dot.off{background:#f87171}
+.form{display:grid;grid-template-columns:180px 1fr;gap:8px 12px;align-items:center}
+.drop{border:2px dashed var(--pri2);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:var(--pri);background:#f8fbff;font-weight:600}
+.drop.over{background:#e6f0fa}
+.next{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:4px 0 18px}
+.order{background:#eaf3fb;border-color:#cfe0f0}
+.check span{margin-right:14px}.kind{display:inline-block;min-width:64px;font-weight:700}
+details summary{cursor:pointer;color:var(--sub);font-size:12.5px}
 #runstate{background:#0f172a;color:#fff;border-radius:8px;padding:4px 10px;font-size:12px}
 .split{display:grid;grid-template-columns:340px 1fr;gap:14px}
 .list .it{padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
@@ -53,19 +66,21 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
 <header>
   <div><h1>Lecture Composer <span class="sub">강의 편성 엔진</span></h1></div>
   <select id="job"></select>
-  <span class="sub" id="jobinfo"></span>
+  <span class="tool" title="집필·교재·이미지 설계에 쓰는 Claude Code"><i class="dot" id="cldot"></i><span id="cltxt">Claude</span></span>
+  <span class="tool" title="음성 엔진(engine/backplate)"><i class="dot" id="ttdot"></i><span id="tttxt">SuperTonic3</span></span>
   <nav class="tabs">
-    <button data-tab="dash" class="on">대시보드</button>
-    <button data-tab="view">원고·결과 보기</button>
-    <button data-tab="goal">목표서</button>
-    <button data-tab="newjob">기획(새 IP·강 수)</button>
-    <button data-tab="acct">계정·로그인</button>
+    <button data-tab="newjob">① 원고</button>
+    <button data-tab="dash" class="on">② 만들기</button>
+    <button data-tab="view">③ 결과 보기</button>
+    <button data-tab="set">설정</button>
   </nav>
 </header>
 
 <main>
 <!-- ── 대시보드 ─────────────────────────────────────────── -->
 <section id="tab-dash">
+  <div class="card order"><b>순서</b> <span class="mini">① 원고에서 원천 넣기 · 강 수 정하기 → 여기서 <b>2 집필 → 3 렌더 → 4 잇기</b> (또는 퇴근 전 「제작(무인)」) → ③ 결과 보기에서 확인 · 화이트보드(시험)</span>
+    <div class="mini" id="jobinfo" style="margin-top:4px"></div></div>
   <div class="card">
     <h2>실행 옵션 <span class="mini">— 아래 단계 버튼에 같이 적용됩니다</span></h2>
     <div class="row">
@@ -89,10 +104,21 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
       <th>강</th><th>담당</th><th>제목</th><th class="num">확장비</th><th class="num">예시</th><th>집필</th><th>렌더</th><th>완성</th><th>게시</th><th>이 강만</th>
     </tr></thead><tbody id="rows"></tbody></table>
   </div>
+  <div class="next"><span class="mini">영상이 나왔으면 →</span><button class="b p" data-next="view">다음: ③ 결과 보기 →</button></div>
 </section>
 
-<!-- ── 계정·로그인 ─────────────────────────────────────── -->
-<section id="tab-acct" class="hide">
+<!-- ── 설정(Claude 한도 · 계정·로그인 · 목표서) ─────────── -->
+<section id="tab-set" class="hide">
+  <div class="card">
+    <h2>Claude 사용 한도 <span class="mini">— 5시간 한도·주간 한도에 걸리면 기다렸다가 <b>같은 일부터 이어서</b> 합니다(창은 켜 두세요 · 기다리는 동안 PC 절전을 막습니다)</span></h2>
+    <div class="form" style="max-width:760px">
+      <span>최대 기다릴 시간</span><span class="row"><input id="l-hours" type="number" min="0" step="1" style="width:90px"> 시간 <span class="mini">0 = 기다리지 않고 바로 멈춤 · 기본 24</span></span>
+      <span>다시 확인 간격</span><span class="row"><select id="l-poll"><option value="30">30분마다</option><option value="60">1시간마다</option></select>
+        <span class="mini">재설정 시각을 모를 때. 시각이 메시지에 있으면 그 시각(+1~2분)에 다시 시작합니다(길어도 1시간마다 확인)</span></span>
+    </div>
+    <div class="row" style="margin-top:10px"><button class="b p" id="l-save">저장</button><span class="mini" id="l-msg"></span></div>
+  </div>
+
   <div class="card">
     <h2>이 PC 를 쓰는 사람 <span class="mini">— 팀원마다 자기 PC·자기 유료 계정으로 씁니다. 로그인 토큰은 이 PC 의 profiles/ 에만 있고 깃에 올라가지 않습니다.</span></h2>
     <div class="row"><label class="opt">내 이름 <input id="a-me" placeholder="예: 홍길동" size="16"></label><button class="b p" id="a-me-save">저장</button>
@@ -121,6 +147,21 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
     <p class="mini">로그인은 새 창에서 <code>codex login</code> 이 열립니다(브라우저에서 ChatGPT 로그인 → 끝나면 「새로고침」). 「로그인됨」이어도 세션이 죽어 있을 수 있습니다 —
       그때 그림이 token_revoked 로 한꺼번에 실패하면 그 칸을 다시 로그인하십시오. 사용량은 이 PC 에서 구운 장수를 칸별로 센 것입니다(logs/usage.jsonl).</p>
   </div>
+
+  <div class="card"><h2>목표서·편성표 직접 고치기 <span class="mini">— 고급</span></h2></div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <select id="g-which"><option value="job">목표서 job.json</option><option value="local">이 PC 덮어쓰기 job.local.json</option><option value="curriculum">편성표 curriculum.json</option></select>
+        <button class="b" id="g-load">불러오기</button>
+      </div>
+      <div class="row"><span class="mini" id="g-msg"></span><button class="b p" id="g-save">저장(검증 후)</button></div>
+    </div>
+    <p class="mini">목표서: 강 수(curriculum.lectures_per_subject) · 강 길이(target_min) · 그림(backplate.image_mode) · 보강(enrich.web) · 채널·공개 범위(youtube) · 책 문체(book_export).
+      편성표는 plan 결과입니다 — 섹션 경계를 옮겨 저장하면 그대로 씁니다(plan 을 다시 돌리지 마십시오).</p>
+    <textarea id="g-text" class="code" spellcheck="false"></textarea>
+  </div>
 </section>
 
 <!-- ── 원고·결과 보기 ───────────────────────────────────── -->
@@ -138,65 +179,60 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
   </div>
 </section>
 
-<!-- ── 목표서 ───────────────────────────────────────────── -->
-<section id="tab-goal" class="hide">
-  <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <div class="row">
-        <select id="g-which"><option value="job">목표서 job.json</option><option value="local">이 PC 덮어쓰기 job.local.json</option><option value="curriculum">편성표 curriculum.json</option></select>
-        <button class="b" id="g-load">불러오기</button>
-      </div>
-      <div class="row"><span class="mini" id="g-msg"></span><button class="b p" id="g-save">저장(검증 후)</button></div>
-    </div>
-    <p class="mini">목표서: 강 수(curriculum.lectures_per_subject) · 강 길이(target_min) · 그림(backplate.image_mode) · 보강(enrich.web) · 채널·공개 범위(youtube) · 책 문체(book_export).
-      편성표는 plan 결과입니다 — 섹션 경계를 옮겨 저장하면 그대로 씁니다(plan 을 다시 돌리지 마십시오).</p>
-    <textarea id="g-text" class="code" spellcheck="false"></textarea>
-  </div>
-</section>
-
-<!-- ── 새 IP ────────────────────────────────────────────── -->
+<!-- ── ① 원고 ───────────────────────────────────────────── -->
 <section id="tab-newjob" class="hide">
   <div class="card">
-    <h2>① 새 IP(잡) 만들기</h2>
-    <p class="mini">지금 잡의 목표서를 본으로 <b>빈 잡</b>을 만듭니다. 가져올 폴더를 적거나, 아래 ② 칸에 파일을 끌어다 놓으면 됩니다.
-      결과물은 따로 폴더가 생기지 않고 <code>jobs/&lt;잡 이름&gt;/</code> 안에 모두 모입니다(input · manuscripts · out · meta).</p>
-    <div class="kv">
-      <span>잡 이름(영문)</span><input id="n-name" placeholder="예: course-a-26 (영문 · 폴더 이름이 됩니다)">
-      <span>제목</span><input id="n-title" placeholder="예: ○○ 자격증 2027 이론 강의">
-      <span>책/과정 이름</span><input id="n-book" placeholder="예: SQL 개발자">
-      <span>강 길이(분)</span><input id="n-min" type="number" value="35" style="width:90px">
-      <span>재생목록</span><input id="n-playlist" placeholder="비우면 제목">
-      <span>설명란 링크(선택)</span><input id="n-site" placeholder="예: https://(문제집 사이트)/detail.html?pd=…">
-      <span>가져올 폴더(선택)</span><input id="n-import" placeholder="예: _context\과정이름  또는  D:\자료\과정이름 — 안의 html·mNN.json 을 input/ 으로 복사(종류 자동 판별)">
+    <h2>① 새 작업 만들기 <span class="mini">— 원천 폴더나 파일을 고르면 작업 폴더로 <b>복사</b>해 옵니다(원본은 그대로)</span></h2>
+    <div class="form">
+      <span>원천</span><span class="row"><button class="b" id="pk-folder">📁 폴더 지정하기</button><button class="b" id="pk-files">📄 파일 선택하기</button>
+        <span class="mini" id="pickInfo">아직 고르지 않았어요. 요약노트·영상 원고(.html)·문항(mNN.json)이 든 폴더, 또는 문항 앱의 책 폴더</span></span>
+      <span>작업 이름 (영문)</span><input id="n-name" placeholder="예: sqld-27  (비우면 폴더 이름으로 채워요 · 폴더 이름이 됩니다)">
+      <span>강의 이름</span><input id="n-title" placeholder="예: SQLD 2027 이론 강의">
+      <span>책·과정 이름</span><input id="n-book" placeholder="예: SQL 개발자 (비우면 강의 이름)">
+      <span>강 길이(분)</span><span><input id="n-min" type="number" value="35" style="width:90px"> <span class="mini">강 수는 아래 ③ 에서 시장조사로 정합니다</span></span>
     </div>
-    <div class="row" style="margin-top:12px"><button class="b p" id="n-make">잡 만들기 (폴더를 적었으면 가져와서 후보까지 계산)</button><span class="mini" id="n-msg"></span></div>
+    <details style="margin-top:8px"><summary>더 보기 — 재생목록 · 설명란 링크</summary>
+      <div class="form" style="margin-top:8px">
+        <span>재생목록</span><input id="n-playlist" placeholder="비우면 강의 이름">
+        <span>설명란 링크(선택)</span><input id="n-site" placeholder="예: https://(문제집 사이트)/detail.html?pd=…">
+      </div></details>
+    <div class="row" style="margin-top:12px"><button class="b p" id="n-make" disabled>작업 만들기</button><button class="b" id="n-empty">빈 작업만 만들기</button><span class="mini" id="n-msg"></span></div>
+  </div>
+
+  <div class="card" id="src-card">
+    <h2>② 지금 작업의 원천 <span class="mini" id="src-job"></span></h2>
+    <div class="check" id="src-check"></div>
+    <div class="drop" id="drop" style="margin-top:10px">여기에 요약노트·영상 원고(.html)·문항(mNN.json)·리뷰 페이지를 끌어다 놓으면 <b>종류를 알아서 나눠</b> 이 작업에 넣습니다 · 또는 <u>파일 고르기</u>
+      <input type="file" id="drop-in" multiple accept=".html,.htm,.json" class="hide"></div>
+    <div class="row" style="margin:8px 0"><button class="b" id="src-more">📁 폴더에서 더 가져오기</button><button class="b" data-open="input">input 폴더 열기</button><span class="mini" id="src-import-msg"></span></div>
+    <table><thead><tr><th>종류</th><th>파일</th><th>내용</th><th>상태</th><th></th></tr></thead><tbody id="src-rows"></tbody></table>
+    <p class="mini">요약노트와 영상 원고는 <b>파일 이름순</b>으로 1·2·3부가 됩니다(「N과목」이 있으면 그 번호) — 이름 앞에 <code>01-</code> <code>02-</code>를 붙여 순서를 맞추십시오. 넣거나 빼면 ③ 후보표가 다시 계산됩니다.</p>
+    <details><summary>폴더 구조</summary><pre class="mini" style="margin:6px 0 0">jobs/&lt;작업&gt;/   job.json(목표서) · brief.md(기획 메모) · curriculum.json(편성표)
+  input/notes/     요약노트 (필수 · 강 나누기의 뼈대)
+  input/scripts/   영상 원고 (권장 · 있으면 확장비가 크게 줄어듭니다)
+  input/rounds/    문항 mNN.json (선택 · 기출 맛보기 · 없으면 예시 자리 14분을 비워 두고 진행)
+  input/review.html  리뷰 페이지 (선택 · 등록 단계)
+  manuscripts/ · out/ · meta/   ② 만들기의 결과</pre></details>
   </div>
 
   <div class="card">
-    <h2>② 원천 파일 <span class="mini">— 파일을 칸에 끌어다 놓거나 칸을 눌러 고르십시오. 잡 폴더 <code id="src-dir"></code> 안에 저장되고 목표서에 바로 반영됩니다.</span></h2>
-    <p class="mini">순서가 중요합니다. 요약노트와 영상 원고는 <b>파일 이름순</b>으로 1·2·3부가 됩니다(「N과목」이 있으면 그 번호). 두 칸의 파일 이름 앞에 <code>01-</code> <code>02-</code>를 붙여 순서를 맞추십시오.
-      파일을 넣거나 빼면 아래 <b>④ 후보표가 자동으로 다시 계산</b>됩니다(편성은 강 수를 정한 뒤).</p>
-    <div class="row" style="margin:6px 0 12px"><span class="mini">또는 폴더에서 한 번에 가져오기:</span><button class="b" data-open="input">input 폴더 열기</button><button class="b" data-open="job">잡 폴더 열기</button><input id="src-import" size="40" placeholder="_context\과정이름  또는  D:\자료\과정이름"><button class="b p" id="src-import-go">가져오기(복사)</button><span class="mini" id="src-import-msg"></span></div>
-    <div class="grid2" id="drops"></div>
-  </div>
-
-
-  <div class="grid2">
-    <div class="card">
-      <h2>③ Claude Code 에 할 말 <span class="mini">— 추천 1번 프롬프트</span></h2>
+    <h2>③ 강 수 정하기 <span class="mini" id="p-job"></span> <span class="mini">— 시장조사가 1순위, 확장비는 참고</span></h2>
+    <div class="grid2">
+      <div class="card">
+      <h3 style="margin:0 0 6px;font-size:14px">시장조사를 Claude Code 에 맡기기 <span class="mini">— 추천</span></h3>
       <p class="mini"><b>지금 Claude Code 에 이렇게 말하십시오</b> — 아래 문장을 그대로 복사해 VSCode 의 Claude Code 에 붙여 넣습니다.
         기준은 <b>시장조사가 1순위, 확장비는 참고만</b>입니다. Claude 가 경쟁 인강을 조사해 제1 권고안을 내고, 좋다고 하면 <code>run.bat decide</code> 로 목표서와 기획 메모에 적습니다. 끝나면 「다시 불러오기」.
         (같은 규칙이 레포의 <code>CLAUDE.md</code> 에 적혀 있습니다.)</p>
       <textarea id="p-prompt" class="code" style="height:170px"></textarea>
       <div class="row" style="margin-top:6px"><button class="b p" id="p-copy">복사</button><button class="b" id="p-reset">추천 문장으로 되돌리기</button><button class="b" id="p-reload">다시 불러오기</button></div>
     </div>
-    <div class="card">
-      <h2>기획 메모 <span class="mini">brief.md — 정한 것과 이유</span></h2>
+      <div class="card">
+      <h3 style="margin:0 0 6px;font-size:14px">기획 메모 <span class="mini">brief.md — 정한 것과 이유</span></h3>
       <pre id="p-brief" style="white-space:pre-wrap;font:12.5px/1.6 inherit;max-height:340px;overflow:auto;margin:0"></pre>
     </div>
-  </div>
-  <div class="card">
-    <h2>④ 강 수 후보표 <span class="mini" id="p-job"></span> <span class="mini">— 대화 없이 화면에서 고를 때</span></h2>
+    </div>
+    <h3 style="margin:14px 0 6px;font-size:14px">화면에서 후보 고르기</h3>
+
     <p class="mini">강 수는 정답이 없는 결정이라 <b>코드는 후보와 근거만</b> 냅니다. 고르는 것은 사람(그리고 Claude Code 와의 대화)입니다.
       확장비 = 목표 개념 분량 ÷ 기존 내레이션 — <b>1.0~1.4 가 가장 좋고</b>, 0.9 미만은 줄여야 하며(강이 길어짐), 2.0 초과는 지어낼 몫이 큽니다.</p>
     <div class="row"><button class="b p" id="p-calc">후보 계산</button><span class="mini" id="p-cur"></span></div>
@@ -204,11 +240,13 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
     <table><thead><tr><th>#</th><th>배분</th><th>강 × 길이</th><th>근거</th><th class="num">확장비(평균)</th><th class="num">2배 초과</th><th class="num">0.9 미만</th><th class="num">예시</th><th></th></tr></thead>
       <tbody id="p-rows"></tbody></table>
     <div class="row" style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)"><b>직접 정하기</b><span class="mini">(대화에서 나온 시장조사 권고안을 그대로 적을 때)</span><label class="opt">과목별 강 수 <input id="p-per" placeholder="예: 4,18  또는  12,12,12,12" size="20"></label><label class="opt">강 길이(분) <input id="p-target" type="number" value="35" style="width:70px"></label><label class="opt">이유 <input id="p-note" size="34" placeholder="예: 시장 중앙값 약 13시간, 출제 10:40"></label><button class="b p" id="p-manual">이걸로 정하기</button></div>
+  
   </div>
-
+  <div class="next"><span class="mini">원천이 다 들어왔고 강 수를 정했으면 →</span><button class="b p" data-next="dash">다음: ② 만들기 →</button></div>
 </section>
 </main>
 
+<div id="loggrip" title="끌어서 높이 조절 · 두 번 누르면 크게/작게"></div>
 <div id="logbar"><span id="runstate">대기</span><button class="b d" id="stop">중지</button><button class="b" id="clear">지우기</button></div>
 <div id="logbox"></div>
 
@@ -217,7 +255,6 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 let JOB = "", ST = null, logOff = 0, ME = "";
 
 const STAGES = [
-  {k:"pack",    n:"원천 모으기", d:"요약노트·영상 원고·문항을 잡 폴더 input/ 으로 복사합니다(원천이 있는 PC에서).", io:"source.* → input/"},
   {k:"plan",    n:"1 편성",     d:"목표서대로 강을 나누고 예시 문항을 고릅니다. 확장비 3.5배 초과는 ⚠. 다시 하려면 --force(손편집 덮음).", io:"input/ → curriculum.json", force:true},
   {k:"examples",n:"문항 반영",  d:"문항(mNN.json)이 나중에 들어오거나 바뀌었을 때. 강 나누기는 그대로 두고 예시만 다시 고릅니다. 이어서 집필(저장된 집필 재사용 — Claude 를 다시 부르지 않음) → 렌더.", io:"input/rounds → curriculum.json(examples)"},
   {k:"compose", n:"2 집필",     d:"집필 에이전트(Claude)가 섹션마다 목표 분량으로 원고를 씁니다. 자막·발음·여는/닫는 말·도식.", io:"편성표 + input/ → manuscripts/"},
@@ -229,6 +266,7 @@ const STAGES = [
   {k:"register",n:"7 등록",     d:"사이트 youtube_map · review.html · statements.jsonl. 경로가 없는 PC 에선 건너뜀.", io:"youtube_ids → 사이트·리뷰"},
   {k:"textbook",n:"8 교재(종합본)", d:"이 강의의 교재 원고를 새로 씁니다(요약노트=사실, 강의 원고=설명 흐름). 과목마다 요약노트와 같은 형식의 HTML — 요약노트 HWPX 변환에 그대로 넣습니다.", io:"input + manuscripts/ → textbook/ · out/textbook/NN-textbook-*.html (+ .md·PNG)"},
   {k:"make",    n:"제작(무인) 2→4 + 교재", d:"강마다 집필 → 렌더 → 잇기, 끝나면 교재(종합본 HTML). 메타·게시·등록은 하지 않습니다. 한 강이 실패해도 다음 강으로 넘어가고 끝에 강별 결과를 정리합니다 — 퇴근 후 돌리기용.", io:"→ out/Lxx/Lxx.mp4 · .srt · out/textbook/"},
+  {k:"whiteboard", n:"화이트보드(시험)", d:"완성된 강(렌더된 섹션 mp4)을 손글씨 화이트보드 화면으로 다시 굽습니다. 원고·목소리·시간축은 그대로, 펜은 그리지 않습니다. 강 칸에 L01 처럼 적고 실행 — 1강 약 20분.", io:"out/Lxx/parts/ → out_wb/Lxx/Lxx.mp4"},
   {k:"all",     n:"전체 1→7",   d:"끝난 단계는 건너뛰고 이어서. 강·섹션 옵션이 적용됩니다.", io:""},
 ];
 
@@ -276,9 +314,10 @@ async function refresh(){
     <td class="num ${ex>3.5?'warn':''}">×${ex??"-"}<div class="mini">${r.plan.expand_base==="script"?"원고 기준":"노트 기준"}</div></td>
     <td class="num">${r.examples}</td>
     <td>${pill(r.compose,r.n)}</td><td>${pill(r.render,r.n)}</td>
-    <td>${r.video?`<a href="#" data-see="${r.id}">${fmtMin(r.stitch_sec)}</a>`:"-"}</td>
+    <td>${r.video?`<a href="#" data-see="${r.id}">${fmtMin(r.stitch_sec)}</a>`:"-"}${r.wb_video?`<div class="mini"><a href="#" data-see="${r.id}">화이트보드</a></div>`:""}</td>
     <td>${r.yt?`<a target="_blank" href="https://youtu.be/${r.yt}">${r.yt}</a>`:(r.meta?'<span class="pill">메타</span>':"-")}</td>
     <td class="row">${["compose","render","stitch","meta","publish"].map(k=>`<button class="b" data-one="${k}" data-id="${r.id}">${{compose:"집필",render:"렌더",stitch:"잇기",meta:"메타",publish:"게시"}[k]}</button>`).join("")}
+      <button class="b" data-one="whiteboard" data-id="${r.id}" ${r.video?"":"disabled"} title="렌더·잇기가 끝난 강만">화이트보드</button>
       <button class="b" data-see="${r.id}">보기</button></td></tr>`;}).join("");
   $$("[data-claim]").forEach(b=>b.onclick=()=>claimL([b.dataset.claim], false));
   $$("[data-release]").forEach(b=>b.onclick=()=>{ if(confirm(`${b.dataset.release} 담당을 놓을까요?`)) claimL([b.dataset.release], true); });
@@ -287,14 +326,22 @@ async function refresh(){
   const sel=$("#v-lec"); if(sel.options.length!==rs.length){ sel.innerHTML=rs.map(r=>`<option value="${r.id}">${r.id} · ${r.title}</option>`).join(""); }
   setRun(ST.run);
 }
+let LIMIT_WAIT="";      // 마지막 「⏸ Claude 한도」 줄의 다시 확인 시각(풀리면 빈 값)
+function stageName(c){ const k=(c||[])[0]||""; const s=STAGES.find(x=>x.k===k); return s? s.n.replace(/^\d+\s*/,"") : (k==="decide"?"강 수 정하기·편성":k); }
 function setRun(r){ const el=$("#runstate"); if(!r) return;
-  el.textContent = r.running? `실행 중: run.bat ${r.cmd.join(" ")}` : (r.cmd&&r.cmd.length? `끝남(${r.code}): ${r.cmd.join(" ")}` : "대기");
-  el.style.background = r.running? "#1F4E79" : (r.code? "#b91c1c" : "#0f172a"); $("#stop").disabled=!r.running; }
+  const what = `${stageName(r.cmd)}${(r.cmd||[]).includes("--only")?" "+r.cmd[r.cmd.indexOf("--only")+1]:""}`;
+  el.className="";
+  if(r.running && LIMIT_WAIT){ el.textContent=`⏸ Claude 한도 대기 — ${LIMIT_WAIT} 다시 시작`; el.classList.add("wait"); }
+  else if(r.running){ el.textContent=`⏳ ${what} 하는 중…`; el.classList.add("busy"); }
+  else if(r.cmd&&r.cmd.length){ el.textContent = r.code? `✗ ${what} — 중간에 멈췄어요(${r.code})` : `✓ ${what} — 다 됐어요`; el.classList.add(r.code?"fail":"done"); }
+  else el.textContent="대기 중";
+  el.title = (r.cmd||[]).length? "run.bat "+r.cmd.join(" ") : ""; $("#stop").disabled=!r.running; }
 
 async function pollLog(){
   try{ const d = await api(`/api/log?offset=${logOff}`); if(d.text){ const box=$("#logbox"); const atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
-      box.textContent += d.text; if(box.textContent.length>400000) box.textContent=box.textContent.slice(-300000); if(atEnd) box.scrollTop=box.scrollHeight; }
-    logOff=d.offset; const was=ST&&ST.run&&ST.run.running; setRun(d.run); if(was && !d.run.running) refresh(); }catch(e){}
+      box.textContent += d.text;
+      for(const ln of d.text.split("\n")){ if(ln.includes("⏸")){ const m=ln.match(/(\d{1,2}:\d{2}) 에 다시 확인/); LIMIT_WAIT = m? m[1] : "곧"; } if(ln.includes("▶ Claude 한도가 풀렸")||ln.startsWith("$ run.bat")) LIMIT_WAIT=""; } if(box.textContent.length>400000) box.textContent=box.textContent.slice(-300000); if(atEnd) box.scrollTop=box.scrollHeight; }
+    logOff=d.offset; const was=ST&&ST.run&&ST.run.running; setRun(d.run); if(was && !d.run.running){ LIMIT_WAIT=""; refresh(); checkTools(); } if(ST) ST.run=d.run; }catch(e){}
 }
 
 // ── 보기 ──
@@ -312,6 +359,7 @@ async function loadView(){
   $("#v-video").innerHTML = r.video? `<h2>완성 영상 ${fmtMin(r.stitch_sec)}</h2><div class="grid2"><video controls src="/files/${JOB}/out/${r.video}"></video>`
      + (r.thumb?`<img src="/files/${JOB}/${r.thumb}" style="width:100%;border-radius:10px">`:"<div></div>")+"</div>" : `<h2>완성 영상</h2><p class="mini">아직 없습니다(렌더 → 잇기).</p>`
      + (r.thumb?`<img src="/files/${JOB}/${r.thumb}" style="width:320px;border-radius:10px">`:"");
+  if(r.wb_video) $("#v-video").innerHTML += `<h2>화이트보드형</h2><video controls src="/files/${JOB}/${r.wb_video}" style="width:100%"></video>`;
   if(ST.book_html) $("#v-video").innerHTML += `<p class="mini">책 원고: <a target="_blank" href="/files/${JOB}/${ST.book_html}">미리보기</a> · <a href="/files/${JOB}/${ST.book}">EPUB 받기</a></p>`;
   const first=$("#v-secs .it"); if(first) first.click();
 }
@@ -337,41 +385,67 @@ function descr(k,f){
   if(k==="rounds") return `${f.round??"?"}회 · ${f.questions}문항`;
   return f.has_videos? "VIDEOS_BY_TAB 있음" : "";
 }
+const KN = {notes:"요약노트", scripts:"영상 원고", rounds:"문항", review:"리뷰 페이지"};
 $$("[data-open]").forEach(b=>b.onclick=()=>api(`/api/open?job=${JOB}&what=${b.dataset.open}`,{method:"POST"}).catch(e=>alert(e.message)));
 async function recompute(){ try{ $("#p-weights").textContent="파일이 바뀌어 후보를 다시 계산하는 중…"; await api(`/api/propose?job=${JOB}`,{method:"POST"}); }catch(e){ $("#p-weights").textContent="후보 계산 불가: "+e.message; } await loadPlanning(); }
 async function loadInputs(){
-  $("#src-dir").textContent = `jobs/${JOB}/input/`;
+  $("#src-job").textContent = JOB? `— ${JOB}  (jobs/${JOB}/input/)` : "— 작업이 없어요, 위에서 먼저 만드세요";
   let data={}; try{ data=await api(`/api/inputs?job=${JOB}`);}catch(e){}
-  $("#drops").innerHTML = DROPS.map(z=>{ const fs=data[z.k]||[]; return `<div class="stage drop" data-k="${z.k}">
-    <div class="t">${z.n} <small>${fs.length}개</small></div><p>${z.d}</p>
-    <div class="dz" data-k="${z.k}" style="border:2px dashed var(--pri2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;color:var(--pri);background:#f4f8fc">
-      여기에 끌어다 놓기 · 눌러서 고르기 <span class="mini">(${z.acc})</span>
-      <input type="file" multiple accept="${z.acc}" class="hide" data-k="${z.k}"></div>
-    <div style="margin-top:8px">${fs.map(f=>`<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0">
-      <div><b>${f.name}</b> <span class="mini">${f.kb}KB</span><div class="mini">${descr(z.k,f)}</div></div>
-      <button class="b d" data-del="${z.k}" data-name="${f.name}">빼기</button></div>`).join("") || '<div class="mini">아직 없습니다</div>'}</div></div>`; }).join("");
-  $$(".dz").forEach(dz=>{ const inp=dz.querySelector("input");
-    dz.onclick=e=>{ if(e.target!==inp) inp.click(); };
-    inp.onchange=()=>sendFiles(dz.dataset.k, inp.files);
-    dz.ondragover=e=>{ e.preventDefault(); dz.style.background="#dbe8f5"; };
-    dz.ondragleave=()=>{ dz.style.background="#f4f8fc"; };
-    dz.ondrop=e=>{ e.preventDefault(); dz.style.background="#f4f8fc"; sendFiles(dz.dataset.k, e.dataTransfer.files); }; });
+  const n=k=>(data[k]||[]).length, bad=k=>(data[k]||[]).some(f=>f.problem);
+  const mark=(k,need)=> n(k)? (bad(k)?`<b class="warn">⚠ ${n(k)}</b>`:`<b style="color:var(--ok)">✓ ${n(k)}</b>`) : (need?`<b class="warn">없음</b>`:`<span class="mini">—</span>`);
+  $("#src-check").innerHTML = `<span>요약노트 ${mark("notes",!n("scripts"))} <span class="mini">(필수 — 영상 원고만 있어도 됨)</span></span><span>영상 원고 ${mark("scripts")} <span class="mini">(권장)</span></span>`
+    + `<span>문항 ${n("rounds")? `<b style="color:var(--ok)">${n("rounds")}회차</b>` : '<span class="mini">— (나중에 넣어도 됨)</span>'}</span><span>리뷰 ${mark("review")}</span>`;
+  const rows=[]; for(const k of ["notes","scripts","rounds","review"]) for(const f of (data[k]||[])) rows.push(`<tr><td><span class="kind">${KN[k]}</span></td>
+    <td><b>${f.name}</b> <span class="mini">${f.kb}KB</span></td><td class="mini">${f.problem?"":descr(k,f)}</td>
+    <td>${f.problem?`<span class="warn">⚠ ${f.problem}</span>`:'<span style="color:var(--ok)">✓</span>'}</td>
+    <td><button class="b d" data-del="${k}" data-name="${f.name}">빼기</button></td></tr>`);
+  $("#src-rows").innerHTML = rows.join("") || '<tr><td colspan="5" class="mini" style="text-align:center;padding:18px">아직 원천이 없어요 — 위 칸에 끌어다 놓거나 「폴더에서 더 가져오기」</td></tr>';
   $$("[data-del]").forEach(b=>b.onclick=async()=>{ if(!confirm(`${b.dataset.name} 을 뺄까요?`)) return;
     await api(`/api/inputs?job=${JOB}&kind=${b.dataset.del}&name=${encodeURIComponent(b.dataset.name)}`,{method:"DELETE"}); await loadInputs(); recompute(); });
 }
-$("#src-import-go").onclick=async()=>{ const f=$("#src-import").value.trim(); if(!f) return;
-  try{ const r=await api("/api/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,folder:f})}); const im=r.imported;
-    $("#src-import-msg").textContent=`가져옴: 요약노트 ${im.notes} · 영상 원고 ${im.scripts} · 문항 ${im.rounds} · 리뷰 ${im.review}`; await loadInputs(); refresh(); recompute(); }
-  catch(e){ $("#src-import-msg").textContent=e.message; } };
-async function sendFiles(kind, files){
+(()=>{ const dz=$("#drop"), inp=$("#drop-in");
+  dz.onclick=e=>{ if(e.target!==inp) inp.click(); };
+  inp.onchange=()=>{ sendFiles(inp.files); inp.value=""; };
+  dz.ondragover=e=>{ e.preventDefault(); dz.classList.add("over"); };
+  dz.ondragleave=()=>dz.classList.remove("over");
+  dz.ondrop=e=>{ e.preventDefault(); dz.classList.remove("over"); sendFiles(e.dataTransfer.files); }; })();
+async function sendFiles(files){
   const fl=[...files]; if(!fl.length) return;
-  if(kind==="review" && fl.length>1){ alert("리뷰 페이지는 하나만 넣습니다"); return; }
-  for(const f of fl){
-    try{ await api(`/api/upload?job=${JOB}&kind=${kind}&name=${encodeURIComponent(f.name)}`,{method:"PUT",body:await f.arrayBuffer()}); }
+  if(!JOB){ alert("작업을 먼저 만드세요 (위 ① 새 작업 만들기)"); return; }
+  const got={}; let i=0;
+  for(const f of fl){ i++; $("#src-import-msg").textContent=`넣는 중 ${i}/${fl.length} — ${f.name}`;
+    try{ const r=await api(`/api/upload?job=${JOB}&kind=auto&name=${encodeURIComponent(f.name)}`,{method:"PUT",body:await f.arrayBuffer()}); got[r.kind]=(got[r.kind]||0)+1; }
     catch(e){ alert(`${f.name}: ${e.message}`); }
   }
+  $("#src-import-msg").textContent = "넣었어요: " + Object.entries(got).map(([k,v])=>`${KN[k]} ${v}`).join(" · ");
   await loadInputs(); refresh(); recompute();
 }
+// 이 PC 의 고르기 창 → 미리 세기
+let PICK=null;
+function cnt(c){ return [["notes","요약노트"],["scripts","영상 원고"],["rounds","문항"],["review","리뷰"]].filter(([k])=>c[k]).map(([k,n])=>`${n} <b>${c[k]}</b>`).join(" · ") || "넣을 파일이 없어요"; }
+async function pickSrc(kind){
+  const info=$("#pickInfo"); info.textContent="선택 창을 띄웠습니다 — 안 보이면 작업 표시줄에서 찾아 고르세요 …";
+  let r;
+  try{ r=await api("/api/pick",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind})}); }
+  catch(e){ const p=prompt("고르기 창을 띄울 수 없습니다. 폴더 경로를 붙여 넣어 주세요 (예: _context\\과정이름 또는 D:\\자료\\과정이름)"); if(!p){ info.textContent="아직 고르지 않았어요."; return null; } r={folder:p, files:[]}; }
+  if(!r.folder && !(r.files||[]).length){ info.textContent="고르지 않았어요."; return null; }
+  try{ const pv=await api("/api/pick/preview",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(r)});
+    const where = r.folder || `파일 ${r.files.length}개`;
+    info.innerHTML = `<b>${where}</b> — ${cnt(pv.count)}${pv.pd?` · 품목 ${pv.pd}`:""}${pv.skipped?` <span class="mini">(그 밖의 파일 ${pv.skipped}개는 넣지 않음)</span>`:""}<div class="mini">${pv.names.join(", ")}${pv.names.length>=12?" …":""}</div>`;
+    r.count=pv.count; return r; }
+  catch(e){ info.innerHTML=`<span class="warn">${e.message}</span>`; return null; }
+}
+function autoName(r){
+  const base=(r.folder||(r.files||[])[0]||"").replace(/[\\/]+$/,"").split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
+  return base.toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,32);
+}
+for(const [id,kind] of [["#pk-folder","folder"],["#pk-files","files"]]) $(id).onclick=async()=>{ const r=await pickSrc(kind); if(!r) return;
+  PICK=r; $("#n-make").disabled=!Object.values(r.count||{}).some(x=>x>0);
+  if(!$("#n-name").value.trim()){ const n=autoName(r); if(/^[a-z0-9][a-z0-9-]{1,40}$/.test(n)) $("#n-name").value=n; setPrompt(); } };
+$("#src-more").onclick=async()=>{ if(!JOB){ alert("작업을 먼저 만드세요"); return; } const r=await pickSrc("folder"); if(!r) return;
+  try{ const x=await api("/api/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,folder:r.folder,files:r.files})});
+    $("#src-import-msg").textContent="가져왔어요: "+cnt(x.imported); await loadInputs(); refresh(); recompute(); }
+  catch(e){ $("#src-import-msg").textContent=e.message; } };
 
 
 // ── 계정·로그인 ──
@@ -397,7 +471,7 @@ $("#a-refresh").onclick=loadAccounts;
 $("#a-me-save").onclick=async()=>{ await api("/api/me",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({me:$("#a-me").value.trim()})}); loadAccounts(); refresh(); };
 $("#a-claude-open").onclick=async()=>{ try{ const r=await api(`/api/accounts/claude?job=${JOB}`,{method:"POST"}); $("#a-msg").textContent=r.message; }catch(e){ alert(e.message); } };
 $("#a-yt-login").onclick=async()=>{ try{ await api(`/api/accounts/youtube?job=${JOB}`,{method:"POST"}); $("#logbox").textContent=""; logOff=0; }catch(e){ alert(e.message); } };
-async function claimL(lids, release){ if(!ME && !release){ alert("계정·로그인 탭에서 「내 이름」을 먼저 저장하십시오"); tab("acct"); return; }
+async function claimL(lids, release){ if(!ME && !release){ alert("설정 탭에서 「내 이름」을 먼저 저장하십시오"); tab("set"); return; }
   try{ await api("/api/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,lids,release})}); refresh(); }catch(e){ alert(e.message); } }
 
 // ── 기획: 강 수 ──
@@ -443,30 +517,62 @@ $("#p-prompt").oninput=()=>{ promptTouched=true; };
 $("#n-name").addEventListener("input", setPrompt);
 $("#p-reset")&&($("#p-reset").onclick=()=>{ promptTouched=false; setPrompt(); });
 
-// ── 새 IP ──
-$("#n-make").onclick=async()=>{ const b={base:JOB,name:$("#n-name").value.trim(),title:$("#n-title").value.trim(),book:$("#n-book").value.trim(),
-    target_min:+$("#n-min").value||35,playlist:$("#n-playlist").value.trim(),site_url:$("#n-site").value.trim(),import_dir:$("#n-import").value.trim()};
+// ── 새 작업 ──
+async function makeJob(withSrc){
+  const b={base:JOB,name:$("#n-name").value.trim(),title:$("#n-title").value.trim(),book:$("#n-book").value.trim(),
+    target_min:+$("#n-min").value||35,playlist:$("#n-playlist").value.trim(),site_url:$("#n-site").value.trim()};
+  if(withSrc && PICK){ b.import_dir=PICK.folder||""; b.files=PICK.files||[]; }
+  if(!b.name){ alert("작업 이름(영문)을 적어 주세요"); return; }
+  $("#n-msg").textContent="만드는 중…";
   try{ const r=await api("/api/jobs/new",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
-    const im=r.imported||{}; $("#n-msg").textContent=`만들었습니다: jobs/${r.name}` + (Object.keys(im).length? ` — 가져옴: 요약노트 ${im.notes||0} · 영상 원고 ${im.scripts||0} · 문항 ${im.rounds||0} · 리뷰 ${im.review||0}` : ""); await loadJobs(r.name);
-    if(Object.values(im).some(x=>x>0)){ $("#n-msg").textContent += " — 후보 계산 중…";
-      try{ await api(`/api/propose?job=${r.name}`,{method:"POST"}); }catch(e){ $("#n-msg").textContent += " (후보 계산 실패: "+e.message+")"; }
-      tab("newjob"); $("#n-msg").textContent = $("#n-msg").textContent.replace(" — 후보 계산 중…"," — 아래 ④ 후보표를 보십시오"); }
-    else tab("newjob"); }
-  catch(e){ $("#n-msg").textContent=e.message; } };
+    const im=r.imported||{}; PICK=null; $("#n-make").disabled=true; $("#pickInfo").textContent="아직 고르지 않았어요.";
+    $("#n-msg").textContent=`만들었어요: jobs/${r.name}` + (Object.keys(im).length? ` — ${cnt(im)}` : "");
+    await loadJobs(r.name);
+    if(Object.values(im).some(x=>x>0)){ $("#n-msg").textContent += " — 강 수 후보 계산 중…";
+      try{ await api(`/api/propose?job=${r.name}`,{method:"POST"}); }catch(e){ $("#n-msg").textContent += " (후보 계산 실패: "+e.message+")"; } }
+    tab("newjob"); $("#n-msg").textContent=$("#n-msg").textContent.replace(" — 강 수 후보 계산 중…","");
+    $("#src-card").scrollIntoView({behavior:"smooth"}); }
+  catch(e){ $("#n-msg").textContent=e.message; } }
+$("#n-make").onclick=()=>makeJob(true);
+$("#n-empty").onclick=()=>makeJob(false);
 
 // ── 공통 ──
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 function tab(t){ $$(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t)); $$("main>section").forEach(s=>s.classList.toggle("hide",s.id!=="tab-"+t));
-  if(t==="goal") gload(); if(t==="view") loadView(); if(t==="newjob"){ setPrompt(); loadInputs(); loadPlanning(); } if(t==="acct") loadAccounts(); }
+  LS.set("tab",t);
+  if(t==="view") loadView(); if(t==="newjob"){ setPrompt(); loadInputs(); loadPlanning(); } if(t==="set"){ gload(); loadAccounts(); loadLimits(); } }
+$$("[data-next]").forEach(b=>b.onclick=()=>{ scrollTo(0,0); tab(b.dataset.next); });
+// Claude 한도 설정(job.json llm.*)
+async function loadLimits(){ try{ const d=JSON.parse(await api(`/api/json?job=${JOB}&which=job`)); const l=d.llm||{};
+  $("#l-hours").value = l.limit_wait_hours ?? 24; $("#l-poll").value = String((l.limit_poll_min ?? 30) >= 45 ? 60 : 30); $("#l-msg").textContent=""; }catch(e){ $("#l-msg").textContent=e.message; } }
+$("#l-save").onclick=async()=>{ try{ const d=JSON.parse(await api(`/api/json?job=${JOB}&which=job`)); d.llm=d.llm||{};
+  d.llm.limit_wait_hours=Math.max(0,+$("#l-hours").value||0); d.llm.limit_poll_min=+$("#l-poll").value;
+  await api(`/api/json?job=${JOB}&which=job`,{method:"PUT",body:JSON.stringify(d,null,2)}); $("#l-msg").textContent=`저장했어요 — 최대 ${d.llm.limit_wait_hours}시간, ${d.llm.limit_poll_min}분마다 확인`; }
+  catch(e){ $("#l-msg").textContent=e.message; } };
+// 머리줄 상태 알약
+async function checkTools(){ try{ const t=await api(`/api/tools?job=${JOB}`); const c=t.claude||{};
+  $("#cldot").className="dot "+(c.installed&&c.logged_in?"on":"off");
+  $("#cltxt").textContent = !c.installed? "Claude 없음" : c.logged_in? `Claude · ${c.email||"로그인됨"}` : "Claude 로그인 필요";
+  $("#ttdot").className="dot "+(t.tts?"on":"off"); $("#tttxt").textContent = t.tts? "SuperTonic3" : "SuperTonic3 없음"; }catch(e){} }
+// 로그 막대 높이(끌기 · 두 번 누르기 · 기억)
+function setLogH(h){ h=Math.max(80, Math.min(innerHeight-120, Math.round(h))); document.documentElement.style.setProperty("--logh", h+"px"); LS.set("logh", h); }
+setLogH(+LS.get("logh")||200);
+(()=>{ const g=$("#loggrip"); let drag=false;
+  g.onmousedown=e=>{ drag=true; e.preventDefault(); document.body.style.userSelect="none"; };
+  addEventListener("mousemove",e=>{ if(drag) setLogH(innerHeight-e.clientY); });
+  addEventListener("mouseup",()=>{ if(drag){ drag=false; document.body.style.userSelect=""; } });
+  g.ondblclick=()=>{ const cur=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--logh"))||200; setLogH(cur > innerHeight*.5 ? 200 : innerHeight*.7); }; })();
 $$(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 $("#stop").onclick=()=>api("/api/stop",{method:"POST"}); $("#clear").onclick=()=>{$("#logbox").textContent="";};
-async function loadJobs(pick){ const js=await api("/api/jobs"); JOB = pick || (js.includes(JOB)?JOB:js[0]);
+async function loadJobs(pick){ const js=await api("/api/jobs"); const mem=LS.get("job"); JOB = pick || (js.includes(JOB)?JOB:(js.includes(mem)?mem:js[0])) || ""; LS.set("job",JOB);
   $("#job").innerHTML=js.map(j=>`<option ${j===JOB?"selected":""}>${j}</option>`).join(""); await refresh(); }
-$("#job").onchange=e=>{ JOB=e.target.value; refresh(); if(!$("#tab-newjob").classList.contains("hide")){ loadInputs(); loadPlanning(); } };
-const PAGE_VERSION="2026-10-02.2";
+$("#job").onchange=e=>{ JOB=e.target.value; LS.set("job",JOB); refresh(); checkTools(); const t=LS.get("tab")||"dash"; if(t!=="dash") tab(t); };
+const PAGE_VERSION="2026-10-06.2";
 (async()=>{ let ok=false; try{ const v=await api("/api/version"); ok=v.version===PAGE_VERSION; }catch(e){}
   if(!ok){ const d=document.createElement("div"); d.style.cssText="background:#b91c1c;color:#fff;padding:10px 20px;font-weight:700";
     d.textContent="서버가 예전 버전입니다 — run.bat 창을 닫고 다시 실행하십시오(화면만 새것이고 서버 코드는 옛것이라 일부 기능이 다르게 동작합니다)."; document.body.prepend(d); } })();
-drawStages(); loadJobs(); setInterval(pollLog,1500); setInterval(()=>{ if(!document.hidden) refresh(); },8000);
+drawStages(); loadJobs().then(async()=>{ const js=await api("/api/jobs"); tab(js.length? (LS.get("tab")||"dash") : "newjob"); checkTools(); });
+setInterval(checkTools,60000); setInterval(pollLog,1500); setInterval(()=>{ if(!document.hidden) refresh(); },8000);
 </script>
 </body>
 </html>

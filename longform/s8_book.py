@@ -55,8 +55,8 @@ p{text-indent:1em;margin:.4em 0}
 table{border-collapse:collapse;margin:1em auto}td,th{border:1px solid #999;padding:.3em .6em}
 .box{border:1px solid #9DC3E6;background:#F4F8FC;padding:.6em 1em;margin:1em 0}
 .box h4{margin:.2em 0 .4em;color:#1F4E79}
-.ex{border:1px solid #c9b48a;background:#FBF7EE;padding:.6em 1em;margin:1em 0}
-.ex .ans{margin-top:.6em;color:#7a4b14}
+.ex{border-top:1px solid #8a8a8a;border-bottom:1px solid #8a8a8a;padding:.5em 0;margin:1em 0}
+.ex .ans{margin-top:.6em}
 .part{page-break-before:always;text-align:center;margin-top:30%}
 """
 
@@ -109,17 +109,53 @@ def prose_for(job: Job, man: Dict[str, Any], cache: Path, state: State, force: b
 
 
 # ── 장(강) XHTML ──────────────────────────────────────────────────────────
+MD_IMG = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
+
+
+def md_blocks(text: str, assets: List[Dict[str, Any]]) -> str:
+    """문항 글(passage·해설)의 마크다운 조각 → HTML. 표(| … |)는 <table>, ![](assets/x.svg) 는 문항의 SVG 로."""
+    svgs = {a.get("name"): a.get("svg", "") for a in assets or []}
+    out: List[str] = []
+    rows: List[List[str]] = []
+
+    def flush() -> None:
+        body = [r for r in rows if not all(re.fullmatch(r":?-{2,}:?", c) for c in r)]   # |---| 줄은 뺀다
+        if body:
+            out.append("<table><tr>" + "".join(f"<th>{esc(c)}</th>" for c in body[0]) + "</tr>"
+                       + "".join("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>" for r in body[1:])
+                       + "</table>")
+        rows.clear()
+
+    for ln in re.sub(r"<(?!/?svg)[^>]+>", " ", text or "").split("\n"):
+        s = ln.strip()
+        if s.startswith("|"):
+            rows.append([c.strip() for c in s.strip("|").split("|")])
+            continue
+        flush()
+        if not s:
+            continue
+        m = MD_IMG.match(s)
+        if m:
+            frag = xml_frag(svgs.get(Path(m.group(2)).stem, ""))
+            out.append(f'<div class="fig">{frag}</div>' if frag else f"<p>[그림: {esc(m.group(1))}]</p>")
+        else:
+            out.append(f"<p>{esc(s)}</p>")
+    flush()
+    return "".join(out)
+
+
 def example_box(q: Dict[str, Any], title: str) -> str:
+    """기출 맛보기 — 위아래 선만 두른 블록. 끝의 <!--ex--> 는 to_markdown 이 블록 끝을 찾는 표시다."""
     ch = q.get("choices") or []
     ans = int(q.get("answer_index", 0))
-    out = [f'<div class="ex"><h4>{esc(title)}</h4><p>{esc(q.get("question", ""))}</p>']
+    assets = q.get("assets") or []
+    out = [f'<div class="ex"><p><b>{esc(title)}</b></p>', md_blocks(q.get("question", ""), assets)]
     if q.get("passage"):
-        txt = re.sub(r"<[^>]+>", " ", q["passage"])
-        out.append("".join(f"<p>{esc(ln.strip())}</p>" for ln in txt.split("\n") if ln.strip()))
+        out.append(md_blocks(q["passage"], assets))
     out.append("<ol>" + "".join(f"<li>{esc(c)}</li>" for c in ch) + "</ol>")
     lab = CIRCLED[ans] if ans < 5 else str(ans + 1)
-    expl = "".join(f"<p>{esc(p)}</p>" for p in (q.get("explanation") or "").split("\n") if p.strip())
-    out.append(f'<div class="ans"><b>정답 {lab}</b>{expl}</div></div>')
+    out.append(f'<section class="ans"><p><b>정답 {lab}</b></p>{md_blocks(q.get("explanation") or "", assets)}</section>'
+               "</div><!--ex-->")
     return "".join(out)
 
 
@@ -298,9 +334,19 @@ def to_markdown(title: str, body: str) -> tuple:
                 lines.append(("- " if kind == "li" else "") + t)
         return "\n\n" + "\n".join("> " + l for l in lines) + "\n\n"
 
-    s = re.sub(r'<div class="fig">(<svg.*?</svg>)</div>', fig, body, flags=re.S)
+    def ex(m: re.Match) -> str:
+        # 기출 맛보기는 인용 상자가 아니라 위아래 가로줄(---) 사이에 — 안의 표·도식은 아래 일반 변환이 처리한다
+        inner = re.sub(r"<ol>(.*?)</ol>", lambda o: "".join(
+            f"<p>{CIRCLED[i] if i < 5 else i + 1} {_txt(t)}</p>"
+            for i, t in enumerate(re.findall(r"<li>(.*?)</li>", o.group(1), re.S))), m.group(1), flags=re.S)
+        inner = re.sub(r"<p><b>(.*?)</b></p>", lambda b: f"<p>**{_txt(b.group(1))}**</p>", inner, flags=re.S)
+        inner = re.sub(r"</?section[^>]*>", "", inner)
+        return f"<p>---</p>{inner}<p>---</p>"
+
+    s = re.sub(r'<div class="ex">(.*?)</div><!--ex-->', ex, body, flags=re.S)
+    s = re.sub(r'<div class="fig">(<svg.*?</svg>)</div>', fig, s, flags=re.S)
     s = re.sub(r"<table>.*?</table>", table, s, flags=re.S)
-    s = re.sub(r'<div class="(box|ex)">(.*?)</div>\s*(?=<h[1-4]|<div class="(?:box|ex|part|fig)"|$)', box, s, flags=re.S)
+    s = re.sub(r'<div class="(box)">(.*?)</div>\s*(?=<h[1-4]|<div class="(?:box|part|fig)"|<p>---</p>|$)', box, s, flags=re.S)
     s = re.sub(r'<div class="part"><h1>(.*?)</h1></div>', lambda m: f"\n\n# {_txt(m.group(1))}\n\n", s, flags=re.S)
     for lv in (1, 2, 3, 4):
         s = re.sub(rf"<h{lv}>(.*?)</h{lv}>", lambda m, lv=lv: f"\n\n{'#' * (lv + 1)} {_txt(m.group(1))}\n\n", s, flags=re.S)

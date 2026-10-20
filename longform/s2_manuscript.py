@@ -137,19 +137,24 @@ def call_llm(job: Job, prompt: str) -> str:
     # ★ 오래된 API 키 환경변수가 구독 로그인을 가로채 다른 계정에 과금되는 것을 막는다(엔진과 같은 규칙)
     env = dict(os.environ, ANTHROPIC_API_KEY="", ANTHROPIC_AUTH_TOKEN="", ANTHROPIC_BASE_URL="")
     from longform.llm_wait import is_limit, wait_for_claude
-    for _ in range(4):
+    import time
+    quick = 0                       # 확인 질문은 바로 통과했는데 이 호출만 또 한도 문구로 실패한 횟수
+    while True:                     # ★ 횟수 제한 없음 — 최대 기다릴 시간(llm.limit_wait_hours)은 wait_for_claude 가 지킨다
         p = run_cmd(cmd, input_text=prompt, capture=True, check=False, env=env,
                     timeout=float(job.get("llm.timeout_sec", 900)))
         out = (p.stdout or "") + (p.stderr or "")
         # ★ 5시간 한도 등에 걸리면 재설정 시각까지 기다렸다 같은 프롬프트로 다시(무인 제작이 멈추지 않게)
         if (p.returncode != 0 or len(p.stdout or "") < 400) and is_limit(out):
-            if wait_for_claude(job, out[-800:]):
+            t0 = time.time()
+            if wait_for_claude(job, ""):        # 확인 질문으로 지금도 한도인지 먼저 본다(오탐이면 바로 통과)
+                quick = quick + 1 if time.time() - t0 < 300 else 0
+                if quick >= 3:                  # 한도가 아닌데 한도 문구가 섞인 실패 — 무한 반복 방지
+                    raise RuntimeError(f"claude 실패(한도 문구가 있으나 한도는 아님): {out[-500:]}")
                 continue
             raise RuntimeError(f"claude 한도가 풀리지 않았습니다: {out[-300:]}")
         if p.returncode != 0:
             raise RuntimeError(f"claude 실패({p.returncode}): {out[-500:]}")
         return p.stdout
-    raise RuntimeError("claude 한도로 여러 번 실패했습니다")
 
 
 def parse_json(text: str) -> Dict[str, Any]:

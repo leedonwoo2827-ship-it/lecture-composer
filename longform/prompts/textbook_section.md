@@ -6,7 +6,7 @@
 - 장(강): {lecture_label}
 - 이 절: {section_title}
 - 위치: {position}
-- 분량: 절 전체 본문 공백 제외 약 {target_chars}자
+- 분량: `paragraphs` 의 글자만 합쳐 공백 제외 **{target_chars}자 이상**(`points`·`caution`·표·제목은 세지 않는다 — 모자라면 설명·예시·비교를 더 푼다)
 
 ## 재료
 1. [요약노트] — **사실의 근거.** 정의·분류·수치·용어는 여기서만 가져온다.

@@ -36,8 +36,8 @@ EXTRA_CSS = """
 .goals,.points,.wrap{border:1px solid #9DC3E6;background:#F4F8FC;border-radius:8px;padding:10px 16px;margin:12px 0}
 .goals b,.points b,.wrap b{color:#1F4E79}
 .caution{border-left:4px solid #b45309;background:#fff7ed;padding:6px 12px;margin:10px 0}
-.ex{border:1px solid #c9b48a;background:#FBF7EE;border-radius:8px;padding:10px 16px;margin:14px 0}
-.ex h4{margin:.2em 0 .4em}.ex .ans{margin-top:.6em;color:#7a4b14}
+.ex{border-top:1px solid #8a8a8a;border-bottom:1px solid #8a8a8a;padding:8px 0;margin:16px 0}
+.ex .ans{margin-top:.6em}
 .lec{page-break-before:always}
 h4{margin:1.1em 0 .4em;color:#334155}
 """
@@ -117,19 +117,32 @@ def write_section(job: Job, L: Dict[str, Any], i: int, sec: Section, man: Option
     if cached and not force and (cached.get("_hash") == h or state.done(lid, key, h)):
         return cached, figs
     log(f"{lid} {sec.id} 교재 원고 작성 — 목표 {target}자 · {sec.title}")
-    doc = None
-    for attempt in range(2):
+    body = lambda d: sum(chars(p) for s in d.get("subs", []) for p in s.get("paragraphs", []))
+    doc, feedback = None, ""
+    for attempt in range(3):
         try:
-            doc = parse_json(call_llm(job, prompt))
-            break
+            new = parse_json(call_llm(job, prompt + feedback))
         except Exception as e:
-            warn(f"{lid} {sec.id} 교재 JSON 실패({e}) — " + ("다시 시도" if attempt == 0 else "강의 원고로 대신"))
+            warn(f"{lid} {sec.id} 교재 JSON 실패({e}) — " + ("다시 시도" if attempt < 2 else "강의 원고로 대신"))
+            feedback = f"\n\n(이전 출력이 JSON 이 아니었습니다: {e}. JSON 하나만 출력하십시오.)"
+            continue
+        if not doc or body(new) > body(doc):     # 다시 써서 더 짧아지면 앞의 것을 쓴다
+            doc = new
+        got = body(doc)
+        if got >= target * 0.95:
+            break
+        # 분량이 모자라면 한 번 더 — 강의 원고(s2)와 같은 방식
+        feedback = (f"\n\n(이전 출력의 본문이 공백 제외 {got}자로 목표 {target}자에 모자랍니다. "
+                    f"노트·강의 원고 범위 안에서 설명·예시를 더 풀어 같은 형식으로 다시 출력하십시오.)")
+        if attempt == 2 or (attempt == 1 and doc):
+            warn(f"{lid} {sec.id} 교재 분량 부족 {got}/{target}자 — 그대로 진행")
+            break
     if not doc:
         doc = _fallback(sec, man)
     doc["_hash"] = h
     write_json(out_f, doc)
     state.mark(lid, key, h)
-    got = sum(chars(p) for s in doc.get("subs", []) for p in s.get("paragraphs", []))
+    got = body(doc)
     log(f"{lid} {sec.id} → 본문 {got}자")
     return doc, figs
 

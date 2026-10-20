@@ -27,7 +27,7 @@ from longform.util import read_json
 STATIC = Path(__file__).resolve().parent / "static"
 LOG = REPO / "logs" / "web-run.log"
 STAGES = {"propose", "examples", "claim", "release", "me", "pack", "plan", "compose", "render", "stitch", "meta", "login", "publish",
-          "register", "book", "textbook", "all", "make", "status"}
+          "register", "book", "textbook", "all", "make", "status", "whiteboard"}
 
 app = FastAPI(title="Lecture Composer")
 
@@ -113,7 +113,8 @@ def status(job: str = "") -> Dict[str, Any]:
     ids = read_json(j.out_dir / "youtube_ids.json", {}) or {}
     bk = j.out_dir / "book"
     return {"job": job, "title": j.get("title"), "rows": rows(j), "run": RUN.info(), "me": team.me(),
-            "has_input": (j.input_dir / "notes").exists() or (j.input_dir / "scripts").exists(),
+            "has_input": any(any((j.input_dir / k).glob("*.htm*")) for k in ("notes", "scripts")
+                             if (j.input_dir / k).is_dir()),
             "has_curriculum": (j.dir / "curriculum.json").exists(),
             "uploaded": len(ids),
             "book": f"out/book/{j.name}.epub" if (bk / f"{j.name}.epub").exists() else "",
@@ -277,20 +278,28 @@ def inputs(job: str) -> Dict[str, Any]:
 async def upload(job: str, kind: str, name: str, request: Request) -> Dict[str, Any]:
     """파일 하나 = 요청 하나(본문이 파일 바이트). 화면이 여러 개를 차례로 보낸다."""
     j = _job(job)
-    if kind not in KINDS:
-        raise HTTPException(400, f"kind = {', '.join(KINDS)}")
     n = _safe_name(name)
-    if not n.lower().endswith(KINDS[kind]):
-        raise HTTPException(400, f"{kind} 칸에는 {' · '.join(KINDS[kind])} 만 넣을 수 있습니다: {n}")
     data = await request.body()
     if len(data) > 30_000_000:
         raise HTTPException(413, "30MB 를 넘는 파일은 넣을 수 없습니다")
+    if kind == "auto":                 # 끌어다 놓는 칸이 하나 — 종류는 내용으로 가른다
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td) / n
+            tmp.write_bytes(data)
+            kind = _classify(tmp) or ""
+        if not kind:
+            raise HTTPException(400, f"넣을 수 없는 파일입니다(요약노트·영상 원고 .html, 문항 mNN.json, 리뷰 페이지만): {n}")
+    if kind not in KINDS:
+        raise HTTPException(400, f"kind = auto, {', '.join(KINDS)}")
+    if not n.lower().endswith(KINDS[kind]):
+        raise HTTPException(400, f"{kind} 칸에는 {' · '.join(KINDS[kind])} 만 넣을 수 있습니다: {n}")
     d = _kind_dir(j, kind)
     d.mkdir(parents=True, exist_ok=True)
     dst = d / ("review.html" if kind == "review" else n)
     dst.write_bytes(data)
     _sync_inputs(j)
-    return _describe(kind, dst)
+    return {**_describe(kind, dst), "kind": kind}
 
 
 @app.delete("/api/inputs")
@@ -367,79 +376,153 @@ async def new_job(request: Request) -> Dict[str, Any]:
                "profile": yt.get("profile") or f"profiles/{name}"})
     base["register"] = {"_note": "등록 결과는 out/register/ 에 만든다. 리뷰 페이지를 넣고 탭 키를 적으면 그 탭에 강 목록이 들어간다",
                         "review_html": "", "review_tab": b.get("review_tab") or "", "youtube_map_base": "", "pd": name}
+    # 과정 이름은 기준 잡 것을 물려받지 않는다(비우면 제목·책 이름으로 채워진다 — s2_manuscript.course)
+    base["course"] = {"_note": "과정 이름들 — 집필 지시문·여는 말·유튜브 제목/설명/썸네일에 쓰인다(비우면 제목·책 이름)",
+                      "role": "", "short": "", "exam": "", "series": "", "full": ""}
     for k in ("notes", "scripts", "rounds"):
         (d / "input" / k).mkdir(parents=True, exist_ok=True)
     (d / "job.json").write_text(json.dumps(base, ensure_ascii=False, indent=2), encoding="utf-8")
-    got = import_folder(_job(name), b.get("import_dir") or "") if (b.get("import_dir") or "").strip() else {}
+    has_src = (b.get("import_dir") or "").strip() or b.get("files")
+    got = import_paths(_job(name), b.get("import_dir") or "", b.get("files") or []) if has_src else {}
     return {"name": name, "imported": got}
 
 
-def import_folder(j, folder: str) -> Dict[str, Any]:
-    """폴더 안의 파일을 **복사**해 input/ 에 넣는다(한 번만 — 이후 실행은 사본만 본다).
-
-    종류는 내용으로 가른다: h3 에 data-say 가 있으면 영상 원고, 없으면 요약노트,
-    VIDEOS_BY_TAB 이 있으면 리뷰 페이지, mNN.json 은 문항. 상대경로는 레포 기준(`_context\\과정이름`).
-    """
+def _classify(f: Path) -> Optional[str]:
+    """파일 하나의 종류를 **내용으로** 가른다 — notes | scripts | rounds | review | None(넣지 않음).
+    h3 에 data-say 가 있으면 영상 원고, 없으면 요약노트, VIDEOS_BY_TAB 이 있으면 리뷰 페이지, mNN.json 은 문항."""
     import re as _re
-    src = Path(folder.strip().strip('"'))
-    if not src.is_absolute():
-        src = REPO / src
-    if not src.is_dir():
-        raise HTTPException(400, f"가져올 폴더가 없습니다: {src}")
-    n = {"notes": 0, "scripts": 0, "rounds": 0, "review": 0}
+    low = f.name.lower()
+    if low.startswith(("~$", ".")):
+        return None
+    if low.endswith((".html", ".htm")):
+        t = f.read_text(encoding="utf-8", errors="replace")
+        if "VIDEOS_BY_TAB" in t:
+            return "review"
+        if _re.search(r"<h3\b[^>]*data-say\s*=", t, _re.I):
+            return "scripts"
+        return "notes"
+    if _re.fullmatch(r"m\d+\.json", low):
+        return "rounds"
+    return None
+
+
+def _src_path(p: str) -> Path:
+    src = Path((p or "").strip().strip('"'))
+    return src if src.is_absolute() else REPO / src
+
+
+def _collect(folder: str = "", files: Optional[List[str]] = None) -> Dict[str, Any]:
+    """가져올 후보 모으기(복사 전). 폴더면 맨 위 파일 + 책 폴더 구조(_rounds/·03/·_book.json), 파일 목록이면 그대로."""
+    out: List[Path] = []
+    pd = ""
+    if (folder or "").strip():
+        src = _src_path(folder)
+        if not src.is_dir():
+            raise HTTPException(400, f"가져올 폴더가 없습니다: {src}")
+        # ★ 문항 앱의 **책 폴더**를 통째로 가리켜도 된다(구조는 docs/원천-가져오기.md):
+        #   _rounds/mNN.json → 문항,  03/summary_*.html → 요약노트,  _book.json → 품목 코드(pd)
+        if (src / "_rounds").is_dir():
+            out += sorted((src / "_rounds").glob("m*.json"))
+        if (src / "03").is_dir():
+            out += sorted((src / "03").glob("summary_*.htm*"))
+        if (src / "_book.json").exists():
+            pd = (read_json(src / "_book.json", {}) or {}).get("pd", "") or ""
+        out += [f for f in sorted(src.iterdir()) if f.is_file()]
+    for f in files or []:
+        q = _src_path(f)
+        if q.is_file():
+            out.append(q)
+    items = [(k, f) for f in out for k in [_classify(f)] if k]
+    count = {"notes": 0, "scripts": 0, "rounds": 0, "review": 0}
+    for k, _ in items:
+        count[k] += 1
+    return {"items": items, "count": count, "pd": pd,
+            "names": [f.name for _, f in items][:12], "skipped": len(out) - len(items)}
+
+
+def import_paths(j, folder: str = "", files: Optional[List[str]] = None) -> Dict[str, Any]:
+    """고른 폴더·파일을 **복사**해 input/ 에 넣는다(원본은 그대로, 경로는 목표서에 적지 않는다)."""
+    got = _collect(folder, files)
+    if got["pd"]:
+        f = j.dir / "job.json"
+        cfg = json.loads(f.read_text(encoding="utf-8"))
+        cfg.setdefault("register", {})["pd"] = got["pd"]
+        if not (cfg.get("youtube") or {}).get("site_url"):
+            tpl = (cfg.get("register") or {}).get("site_url_template") or ""
+            if tpl:
+                cfg.setdefault("youtube", {})["site_url"] = tpl.replace("{pd}", got["pd"])
+        f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
     # ★ 문제집 사이트 내보내기(problems.js · theory/summary_*.js)면 형식을 바꿔 넣는다(longform/import_site.py)
-    from longform import import_site
-    if import_site.is_site_export(src):
-        got = import_site.convert(j, src)
-        n["notes"] += got.get("notes", 0)
-        n["rounds"] += got.get("rounds", 0)
-    # ★ 문항 앱의 **책 폴더**를 통째로 가리켜도 된다(구조는 docs/원천-가져오기.md):
-    #   _rounds/mNN.json → 문항,  03/summary_*.html → 요약노트,  _book.json → 품목 코드(pd)
-    files: List[Path] = []
-    if (src / "_rounds").is_dir() or (src / "03").is_dir():
-        files += sorted((src / "_rounds").glob("m*.json")) if (src / "_rounds").is_dir() else []
-        files += sorted((src / "03").glob("summary_*.htm*")) if (src / "03").is_dir() else []
-        bk = read_json(src / "_book.json", {}) or {}
-        if bk.get("pd"):
-            f = j.dir / "job.json"
-            cfg = json.loads(f.read_text(encoding="utf-8"))
-            cfg.setdefault("register", {})["pd"] = bk["pd"]
-            if not (cfg.get("youtube") or {}).get("site_url"):
-                tpl = (cfg.get("register") or {}).get("site_url_template") or ""
-                if tpl:
-                    cfg.setdefault("youtube", {})["site_url"] = tpl.replace("{pd}", bk["pd"])
-            f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-            n["pd"] = bk["pd"]
-    files += [f for f in sorted(src.iterdir()) if f.is_file()]
-    for f in files:
-        if not f.is_file():
-            continue
-        low = f.name.lower()
-        if low.endswith((".html", ".htm")):
-            t = f.read_text(encoding="utf-8", errors="replace")
-            if "VIDEOS_BY_TAB" in t:
-                kind = "review"
-            elif _re.search(r"<h3\b[^>]*data-say\s*=", t, _re.I):
-                kind = "scripts"
-            else:
-                kind = "notes"
-        elif _re.fullmatch(r"m\d+\.json", low):
-            kind = "rounds"
-        else:
-            continue
+    site: Dict[str, int] = {}
+    if (folder or "").strip():
+        from longform import import_site
+        if import_site.is_site_export(_src_path(folder)):
+            site = import_site.convert(j, _src_path(folder))
+    for kind, f in got["items"]:
         dst_dir = _kind_dir(j, kind)
         dst_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(f, dst_dir / ("review.html" if kind == "review" else f.name))
-        n[kind] += 1
     _sync_inputs(j)
+    n: Dict[str, Any] = dict(got["count"])
+    for k in ("notes", "rounds"):
+        n[k] += site.get(k, 0)
+    if got["pd"]:
+        n["pd"] = got["pd"]
     return n
+
+
+def import_folder(j, folder: str) -> Dict[str, Any]:
+    return import_paths(j, folder=folder)
 
 
 @app.post("/api/import")
 async def api_import(request: Request) -> Dict[str, Any]:
     b = await request.json()
     j = _job(b.get("job", ""))
-    return {"imported": import_folder(j, b.get("folder") or "")}
+    return {"imported": import_paths(j, b.get("folder") or "", b.get("files") or [])}
+
+
+# ── 원천 고르기(이 PC 의 고르기 창) · 미리 세기 · 상태 알약 ──────────────────
+@app.post("/api/pick")
+async def pick(request: Request) -> Dict[str, Any]:
+    """tkinter 고르기 창을 따로 띄운다(서버가 이 PC 에서만 열려 있으므로 창도 이 PC 에 뜬다)."""
+    b = await request.json()
+    kind = "files" if b.get("kind") == "files" else "folder"
+    p = subprocess.run([sys.executable, "-m", "longform.pick", kind], cwd=str(REPO), capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", timeout=900)
+    if p.returncode == 3:
+        raise HTTPException(501, "고르기 창을 띄울 수 없습니다 — 경로를 붙여 넣어 주세요")
+    try:
+        return json.loads((p.stdout or "").strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        raise HTTPException(500, f"고르기 실패: {(p.stderr or p.stdout or '')[-300:]}")
+
+
+@app.post("/api/pick/preview")
+async def pick_preview(request: Request) -> Dict[str, Any]:
+    b = await request.json()
+    got = _collect(b.get("folder") or "", b.get("files") or [])
+    return {k: got[k] for k in ("count", "pd", "names", "skipped")}
+
+
+@app.get("/api/tools")
+def tools(job: str = "") -> Dict[str, Any]:
+    """머리줄 상태 알약 — Claude 설치·로그인·계정, 음성 엔진(SuperTonic3) 준비."""
+    from longform import accounts
+    try:
+        c = (accounts.status(_job(job) if job else None).get("claude")) or {}
+    except Exception as e:  # noqa: BLE001
+        c = {"problem": str(e)}
+    email = ""
+    try:
+        cj = Path.home() / ".claude.json"
+        if cj.exists():
+            email = (json.loads(cj.read_text(encoding="utf-8")).get("oauthAccount") or {}).get("emailAddress") or ""
+    except Exception:  # noqa: BLE001
+        pass
+    onnx = REPO / "engine" / "backplate" / "assets" / "onnx"
+    return {"claude": {"installed": bool(c.get("path")), "logged_in": bool(c.get("logged_in")), "email": email},
+            "tts": onnx.is_dir() and any(onnx.glob("*.onnx"))}
 
 
 # ── 계정·로그인(이 PC 전용 — 토큰은 profiles/ 에, 깃 제외) ───────────────
@@ -529,7 +612,7 @@ def open_folder(job: str, what: str = "job") -> Dict[str, str]:
     return {"opened": str(f)}
 
 
-SERVER_VERSION = "2026-10-02.2"
+SERVER_VERSION = "2026-10-06.2"
 
 
 @app.get("/api/version")
