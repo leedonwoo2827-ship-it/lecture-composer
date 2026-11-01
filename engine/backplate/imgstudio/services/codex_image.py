@@ -38,7 +38,23 @@ FALLBACK_UA = f"codex_cli_rs/{FALLBACK_VERSION} (Windows 11; x64) image-studio"
 AUTH_PATH = Path(os.environ.get("CODEX_AUTH_PATH", str(Path.home() / ".codex" / "auth.json")))
 VERSION_PATH = Path.home() / ".codex" / "version.json"
 
-CODEX_MODEL = os.environ.get("CODEX_IMAGE_MODEL", "gpt-5.5")
+def _codex_cli_model() -> Optional[str]:
+    """`~/.codex/config.toml` 의 `model = "..."` — Codex CLI 가 지금 쓰는 모델.
+
+    ★ 모델 이름을 박아 두면 계정이 그 모델을 잃는 날 **전 장이 HTTP 400 으로**
+      실패한다(2026-11-02 실측: "The 'gpt-5.5' model is not supported when using
+      Codex with a ChatGPT account."). CLI 설정은 계정이 쓸 수 있는 모델로 늘
+      맞춰져 있으므로 그것을 따른다(261013 backplate_showcase 와 같은 방식).
+    """
+    try:
+        text = (Path.home() / ".codex" / "config.toml").read_text(encoding="utf-8")
+    except Exception:
+        return None
+    m = re.search(r'^\s*model\s*=\s*"([^"]+)"', text, re.M)
+    return m.group(1) if m else None
+
+
+CODEX_MODEL = os.environ.get("CODEX_IMAGE_MODEL") or _codex_cli_model() or "gpt-5.5"
 
 # image_generation 툴이 받는 크기 규칙(공식 문서 기준).
 #   · 가로·세로 모두 **16의 배수**
