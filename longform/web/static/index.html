@@ -87,9 +87,7 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
       <label class="opt">강 <input id="o-only" placeholder="비우면 전체 · 예: L01,L02" size="22"></label>
       <label class="opt" title="강 하나는 섹션(요약노트 큰 제목) 2~5개로 되어 있습니다. 1 을 넣으면 첫 섹션(영상 약 10분)만 만들어 빨리 확인합니다. 비우면 강 전체.">앞 섹션만(시험) <input id="o-sections" type="number" min="1" placeholder="비우면 강 전체" style="width:120px"></label>
       <label class="opt"><input id="o-force" type="checkbox"> 다시 만들기(--force)</label>
-      <label class="opt"><input id="o-dry" type="checkbox"> 게시 dry-run(저장 직전 멈춤)</label>
       <label class="opt"><input id="o-mine" type="checkbox"> 내 담당만 보기</label>
-      <label class="opt">게시 최대 <input id="o-max" type="number" min="1" style="width:70px" placeholder="10"></label>
     </div>
   </div>
 
@@ -101,7 +99,7 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
   <div class="card">
     <h2>강별 진행 <span class="mini" id="sum"></span></h2>
     <table><thead><tr>
-      <th>강</th><th>담당</th><th>제목</th><th class="num">확장비</th><th class="num">예시</th><th>집필</th><th>렌더</th><th>완성</th><th>게시</th><th>이 강만</th>
+      <th>강</th><th>담당</th><th>제목</th><th class="num">확장비</th><th class="num">예시</th><th>집필</th><th>렌더</th><th>완성</th><th>이 강만</th>
     </tr></thead><tbody id="rows"></tbody></table>
   </div>
   <div class="next"><span class="mini">영상이 나왔으면 →</span><button class="b p" data-next="view">다음: ③ 결과 보기 →</button></div>
@@ -130,13 +128,6 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
       <div class="kv" id="a-claude"></div>
       <div class="row" style="margin-top:10px"><button class="b p" id="a-claude-open">로그인·계정 바꾸기 / 사용량 창 열기</button></div>
       <p class="mini">새 창의 claude 에서 <code>/login</code> 으로 계정을 바꾸고, <code>/usage</code> 로 남은 사용량을 봅니다. API 키는 쓰지 않습니다(구독 로그인).</p>
-    </div>
-    <div class="card">
-      <h2>YouTube <span class="mini">— 게시(publish)</span></h2>
-      <div class="kv" id="a-yt"></div>
-      <div class="row" style="margin-top:10px"><button class="b p" id="a-yt-login">채널 계정 로그인(전용 Chrome 열기)</button></div>
-      <p class="mini">열린 Chrome 에서 채널 관리 권한이 있는 구글 계정으로 로그인하고 Studio 가 보이면 창을 닫으십시오. 15분 넘는 영상·맞춤 썸네일은 채널 <b>전화 인증</b>이 필요합니다.
-        팀원은 각자 자기 구글 계정(채널 관리자 권한)으로 로그인합니다.</p>
     </div>
   </div>
   <div class="card">
@@ -260,19 +251,14 @@ const STAGES = [
   {k:"compose", n:"2 집필",     d:"집필 에이전트(Claude)가 섹션마다 목표 분량으로 원고를 씁니다. 자막·발음·여는/닫는 말·도식.", io:"편성표 + input/ → manuscripts/"},
   {k:"render",  n:"3 렌더",     d:"backplate-studio 로 섹션 mp4. 자막·발음을 덮어쓰기로 확정, 배경(codex)·도식 PNG.", io:"manuscripts/ → out/Lxx/parts/"},
   {k:"stitch",  n:"4 잇기",     d:"섹션을 무손실로 잇고 −16 LUFS, 챕터, 합본 자막.", io:"parts/ → out/Lxx/Lxx.mp4"},
-  {k:"meta",    n:"5 메타",     d:"유튜브 제목·설명·태그·챕터 + 썸네일.", io:"→ meta/Lxx.json, .thumb.png"},
-  {k:"login",   n:"로그인",     d:"전용 Chrome 프로필로 채널 계정 로그인(처음 한 번). 로그인 후 창을 닫으십시오.", io:"→ profiles/"},
-  {k:"publish", n:"6 게시",     d:"YouTube Studio 자동 업로드(일부공개·재생목록). dry-run 이면 저장 직전 멈춤.", io:"meta/ → out/youtube_ids.json"},
-  {k:"register",n:"7 등록",     d:"사이트 youtube_map · review.html · statements.jsonl. 경로가 없는 PC 에선 건너뜀.", io:"youtube_ids → 사이트·리뷰"},
-  {k:"textbook",n:"8 교재(종합본)", d:"이 강의의 교재 원고를 새로 씁니다(요약노트=사실, 강의 원고=설명 흐름). 과목마다 요약노트와 같은 형식의 HTML — 요약노트 HWPX 변환에 그대로 넣습니다.", io:"input + manuscripts/ → textbook/ · out/textbook/NN-textbook-*.html (+ .md·PNG)"},
+  {k:"textbook",n:"5 교재(종합본)", d:"이 강의의 교재 원고를 새로 씁니다(요약노트=사실, 강의 원고=설명 흐름). 과목마다 요약노트와 같은 형식의 HTML — 요약노트 HWPX 변환에 그대로 넣습니다.", io:"input + manuscripts/ → textbook/ · out/textbook/NN-textbook-*.html (+ .md·PNG)"},
   {k:"make",    n:"제작(무인) 2→4 + 교재", d:"강마다 집필 → 렌더 → 잇기, 끝나면 교재(종합본 HTML). 메타·게시·등록은 하지 않습니다. 한 강이 실패해도 다음 강으로 넘어가고 끝에 강별 결과를 정리합니다 — 퇴근 후 돌리기용.", io:"→ out/Lxx/Lxx.mp4 · .srt · out/textbook/"},
   {k:"whiteboard", n:"화이트보드(시험)", d:"완성된 강(렌더된 섹션 mp4)을 손글씨 화이트보드 화면으로 다시 굽습니다. 원고·목소리·시간축은 그대로, 펜은 그리지 않습니다. 강 칸에 L01 처럼 적고 실행 — 1강 약 20분.", io:"out/Lxx/parts/ → out_wb/Lxx/Lxx.mp4"},
-  {k:"all",     n:"전체 1→7",   d:"끝난 단계는 건너뛰고 이어서. 강·섹션 옵션이 적용됩니다.", io:""},
 ];
 
 async function api(p, o={}) { const r = await fetch(p, o); if(!r.ok){ let t=await r.text(); try{t=JSON.parse(t).detail}catch{}; throw new Error(t);} const ct=r.headers.get("content-type")||""; return ct.includes("json")? r.json() : r.text(); }
 function opts(extra={}) { return {job:JOB, only:$("#o-only").value.trim(), sections:$("#o-sections").value||null,
-  force:$("#o-force").checked, dry_run:$("#o-dry").checked, max:$("#o-max").value||null, ...extra}; }
+  force:$("#o-force").checked, ...extra}; }
 async function run(stage, extra={}) {
   try { await api("/api/run",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...opts(extra),stage})}); $("#logbox").textContent=""; logOff=0; }
   catch(e){ alert(e.message); }
@@ -280,18 +266,12 @@ async function run(stage, extra={}) {
 
 function drawStages(){
   $("#stages").innerHTML = STAGES.map(s=>`<div class="stage"><div class="t">${s.n} <small>${s.k}</small></div>
-    <p>${s.d}</p><div class="io">${s.io}</div><button class="b ${s.k==='all'||s.k==='make'?'p':''}" data-run="${s.k}">실행</button></div>`).join("");
+    <p>${s.d}</p><div class="io">${s.io}</div><button class="b ${s.k==='make'?'p':''}" data-run="${s.k}">실행</button></div>`).join("");
   $$("[data-run]").forEach(b=>b.onclick=()=>{ const k=b.dataset.run;
     if(k==="plan" && $("#o-force").checked && !confirm("편성표를 새로 만들면 손으로 고친 내용이 사라집니다. 계속할까요?")) return;
-    if(k==="publish" && !$("#o-dry").checked && !confirm("실제로 YouTube 에 올립니다(일부공개). 계속할까요?")) return;
     if(k==="make"){
       const only=$("#o-only").value.trim();
       if(!confirm((only? `${only} 를` : "⚠ 강 칸이 비어 있습니다 — 모든 강을") + " 집필 → 렌더 → 잇기 → 교재까지 무인으로 돌립니다(게시는 하지 않음). 계속할까요?")) return;
-    }
-    if(k==="all"){
-      const only=$("#o-only").value.trim(), dry=$("#o-dry").checked;
-      const msg = (only? `${only} 를` : "⚠ 강 칸이 비어 있습니다 — 모든 강을") + " 집필→렌더→잇기→메타→" + (dry? "게시(dry-run, 저장 직전 멈춤)" : "⚠ 실제 YouTube 게시") + "→등록까지 돌립니다. 계속할까요?";
-      if(!confirm(msg)) return;
     }
     run(k); });
 }
@@ -302,9 +282,9 @@ function fmtMin(s){ return s? (s/60).toFixed(1)+"분" : "-"; }
 async function refresh(){
   try{ ST = await api(`/api/status?job=${JOB}`); }catch(e){ return; }
   const s=ST.settings||{};
-  $("#jobinfo").textContent = `${ST.title||""} · 목표 ${s.lectures||"?"}강×${s.target_min||"?"}분 · 그림 ${s.image_mode} · 보강 ${s.web?"켬":"끔"} · ${s.handle} ${s.visibility}`;
+  $("#jobinfo").textContent = `${ST.title||""} · 목표 ${s.lectures||"?"}강×${s.target_min||"?"}분 · 그림 ${s.image_mode} · 보강 ${s.web?"켬":"끔"}`;
   ME = ST.me||""; const rs = ($("#o-mine").checked)? (ST.rows||[]).filter(r=>r.who===ME) : (ST.rows||[]);
-  $("#sum").textContent = rs.length? `${rs.length}강 · 집필 ${rs.filter(r=>r.compose>=r.n).length} · 완성 ${rs.filter(r=>r.video).length} · 게시 ${rs.filter(r=>r.yt).length}`
+  $("#sum").textContent = rs.length? `${rs.length}강 · 집필 ${rs.filter(r=>r.compose>=r.n).length} · 완성 ${rs.filter(r=>r.video).length}`
      + (ST.book? ` · 책 ` : "") : (ST.has_input? "편성표가 없습니다 — 1 편성부터" : "원천이 없습니다 — 원천 모으기부터");
   $("#rows").innerHTML = rs.map(r=>{ const ex=r.plan.expand_ratio; return `<tr class="subj${r.subject_no}">
     <td><b>${r.id}</b><div class="mini">${r.subject_no}과목·${r.n}섹션</div></td>
@@ -315,13 +295,12 @@ async function refresh(){
     <td class="num">${r.examples}</td>
     <td>${pill(r.compose,r.n)}</td><td>${pill(r.render,r.n)}</td>
     <td>${r.video?`<a href="#" data-see="${r.id}">${fmtMin(r.stitch_sec)}</a>`:"-"}${r.wb_video?`<div class="mini"><a href="#" data-see="${r.id}">화이트보드</a></div>`:""}</td>
-    <td>${r.yt?`<a target="_blank" href="https://youtu.be/${r.yt}">${r.yt}</a>`:(r.meta?'<span class="pill">메타</span>':"-")}</td>
-    <td class="row">${["compose","render","stitch","meta","publish"].map(k=>`<button class="b" data-one="${k}" data-id="${r.id}">${{compose:"집필",render:"렌더",stitch:"잇기",meta:"메타",publish:"게시"}[k]}</button>`).join("")}
+    <td class="row">${["compose","render","stitch"].map(k=>`<button class="b" data-one="${k}" data-id="${r.id}">${{compose:"집필",render:"렌더",stitch:"잇기"}[k]}</button>`).join("")}
       <button class="b" data-one="whiteboard" data-id="${r.id}" ${r.video?"":"disabled"} title="렌더·잇기가 끝난 강만">화이트보드</button>
       <button class="b" data-see="${r.id}">보기</button></td></tr>`;}).join("");
   $$("[data-claim]").forEach(b=>b.onclick=()=>claimL([b.dataset.claim], false));
   $$("[data-release]").forEach(b=>b.onclick=()=>{ if(confirm(`${b.dataset.release} 담당을 놓을까요?`)) claimL([b.dataset.release], true); });
-  $$("[data-one]").forEach(b=>b.onclick=()=>{ if(b.dataset.one==="publish" && !$("#o-dry").checked && !confirm(`${b.dataset.id} 을 실제로 올립니다. 계속할까요?`)) return; run(b.dataset.one,{only:b.dataset.id}); });
+  $$("[data-one]").forEach(b=>b.onclick=()=>run(b.dataset.one,{only:b.dataset.id}));
   $$("[data-see]").forEach(b=>b.onclick=e=>{ e.preventDefault(); openView(b.dataset.see); });
   const sel=$("#v-lec"); if(sel.options.length!==rs.length){ sel.innerHTML=rs.map(r=>`<option value="${r.id}">${r.id} · ${r.title}</option>`).join(""); }
   setRun(ST.run);
@@ -455,7 +434,6 @@ async function loadAccounts(){
   let d; try{ d=await api(`/api/accounts?job=${JOB}`); }catch(e){ $("#a-msg").textContent=e.message; return; }
   $("#a-me").value = d.me||"";
   const c=d.claude||{}; $("#a-claude").innerHTML = kv([["상태", okb(c.logged_in)],["실행 파일", c.path? `<code>${c.path}</code>` : `<span class="warn">${c.problem||"없음"}</span>`]]);
-  const y=d.youtube||{}; $("#a-yt").innerHTML = kv([["채널", y.handle||"-"],["상태", okb(y.logged_in)],["채널 ID", y.channel_id||"(첫 게시 때 자동으로 찾음)"],["공개 범위 · 재생목록", `${y.visibility||"-"} · ${y.playlist||"-"}`],["프로필", `<code>${y.profile||"-"}</code>`]]);
   const cx=d.codex||{}; const rows=[...(cx.slots||[]), cx.default];
   $("#a-codex").innerHTML = rows.map(r=>{ const u=r.usage||{}; const isDef=r.slot==="(기본)"; return `<tr>
     <td>${r.active?'<span class="pill ok">●</span>':(isDef && (cx.slots||[]).length?'<span class="pill no">쓰지 않음</span>':"")}</td><td><b>${r.slot}</b>${isDef?`<div class="mini">${(cx.slots||[]).length? '<b>쓰지 않음</b> — 칸이 하나라도 있으면 이 로그인은 쓰이지 않습니다' : '칸이 없을 때만 쓰는 이 PC 의 codex login'}</div>`:""}</td>
@@ -470,7 +448,6 @@ $("#a-slot-copy").onclick=()=>{ const s=$("#a-slot").value.trim(); if(s) codex("
 $("#a-refresh").onclick=loadAccounts;
 $("#a-me-save").onclick=async()=>{ await api("/api/me",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({me:$("#a-me").value.trim()})}); loadAccounts(); refresh(); };
 $("#a-claude-open").onclick=async()=>{ try{ const r=await api(`/api/accounts/claude?job=${JOB}`,{method:"POST"}); $("#a-msg").textContent=r.message; }catch(e){ alert(e.message); } };
-$("#a-yt-login").onclick=async()=>{ try{ await api(`/api/accounts/youtube?job=${JOB}`,{method:"POST"}); $("#logbox").textContent=""; logOff=0; }catch(e){ alert(e.message); } };
 async function claimL(lids, release){ if(!ME && !release){ alert("설정 탭에서 「내 이름」을 먼저 저장하십시오"); tab("set"); return; }
   try{ await api("/api/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({job:JOB,lids,release})}); refresh(); }catch(e){ alert(e.message); } }
 

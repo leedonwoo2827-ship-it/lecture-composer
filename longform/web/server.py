@@ -102,8 +102,10 @@ def index() -> str:
 # ── 잡 · 상태 ─────────────────────────────────────────────────────────────
 @app.get("/api/jobs")
 def jobs() -> List[str]:
+    # 깃에 올라간 본(example·*-sample)은 목록에서 숨긴다 — 새 잡의 본·테마 미리보기용으로만 남겨 둔다
     return sorted(p.name for p in (REPO / "jobs").iterdir()
-                  if p.is_dir() and (p / "job.json").exists() and not p.name.startswith("_"))
+                  if p.is_dir() and (p / "job.json").exists() and not p.name.startswith("_")
+                  and p.name != "example" and not p.name.endswith("-sample"))
 
 
 @app.get("/api/status")
