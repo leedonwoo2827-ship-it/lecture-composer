@@ -316,8 +316,12 @@ function setRun(r){ const el=$("#runstate"); if(!r) return;
   else el.textContent="대기 중";
   el.title = (r.cmd||[]).length? "run.bat "+r.cmd.join(" ") : ""; $("#stop").disabled=!r.running; }
 
+let LOG_STARTED=null;   // 새 실행이 시작되면(화면 밖에서 시작한 것도) 지난 로그를 지우고 처음부터 읽는다
 async function pollLog(){
-  try{ const d = await api(`/api/log?offset=${logOff}`); if(d.text){ const box=$("#logbox"); const atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
+  try{ let d = await api(`/api/log?offset=${logOff}`);
+    if(LOG_STARTED!==null && d.run.started!==LOG_STARTED){ $("#logbox").textContent=""; logOff=0; d = await api(`/api/log?offset=0`); }
+    LOG_STARTED=d.run.started;
+    if(d.text){ const box=$("#logbox"); const atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
       box.textContent += d.text;
       for(const ln of d.text.split("\n")){ if(ln.includes("⏸")){ const m=ln.match(/(\d{1,2}:\d{2}) 에 다시 확인/); LIMIT_WAIT = m? m[1] : "곧"; } if(ln.includes("▶ Claude 한도가 풀렸")||ln.startsWith("$ run.bat")) LIMIT_WAIT=""; } if(box.textContent.length>400000) box.textContent=box.textContent.slice(-300000); if(atEnd) box.scrollTop=box.scrollHeight; }
     logOff=d.offset; const was=ST&&ST.run&&ST.run.running; setRun(d.run); if(was && !d.run.running){ LIMIT_WAIT=""; refresh(); checkTools(); } if(ST) ST.run=d.run; }catch(e){}
