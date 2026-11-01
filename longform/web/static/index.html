@@ -252,8 +252,8 @@ const STAGES = [
   {k:"render",  n:"3 렌더",     d:"backplate-studio 로 섹션 mp4. 자막·발음을 덮어쓰기로 확정, 배경(codex)·도식 PNG.", io:"manuscripts/ → out/Lxx/parts/"},
   {k:"stitch",  n:"4 잇기",     d:"섹션을 무손실로 잇고 −16 LUFS, 챕터, 합본 자막.", io:"parts/ → out/Lxx/Lxx.mp4"},
   {k:"textbook",n:"5 교재(종합본)", d:"이 강의의 교재 원고를 새로 씁니다(요약노트=사실, 강의 원고=설명 흐름). 과목마다 요약노트와 같은 형식의 HTML — 요약노트 HWPX 변환에 그대로 넣습니다.", io:"input + manuscripts/ → textbook/ · out/textbook/NN-textbook-*.html (+ .md·PNG)"},
-  {k:"make",    n:"제작(무인) 2→4 + 교재", d:"강마다 집필 → 렌더 → 잇기, 끝나면 교재(종합본 HTML). 메타·게시·등록은 하지 않습니다. 한 강이 실패해도 다음 강으로 넘어가고 끝에 강별 결과를 정리합니다 — 퇴근 후 돌리기용.", io:"→ out/Lxx/Lxx.mp4 · .srt · out/textbook/"},
   {k:"whiteboard", n:"화이트보드(시험)", d:"완성된 강(렌더된 섹션 mp4)을 손글씨 화이트보드 화면으로 다시 굽습니다. 원고·목소리·시간축은 그대로, 펜은 그리지 않습니다. 강 칸에 L01 처럼 적고 실행 — 1강 약 20분.", io:"out/Lxx/parts/ → out_wb/Lxx/Lxx.mp4"},
+  {k:"make",    n:"제작(무인) 2→4 + 교재", d:"강마다 집필 → 렌더 → 잇기, 끝나면 교재(종합본 HTML). 메타·게시·등록은 하지 않습니다. 한 강이 실패해도 다음 강으로 넘어가고 끝에 강별 결과를 정리합니다 — 퇴근 후 돌리기용.", io:"→ out/Lxx/Lxx.mp4 · .srt · out/textbook/"},
 ];
 
 async function api(p, o={}) { const r = await fetch(p, o); if(!r.ok){ let t=await r.text(); try{t=JSON.parse(t).detail}catch{}; throw new Error(t);} const ct=r.headers.get("content-type")||""; return ct.includes("json")? r.json() : r.text(); }
