@@ -6,7 +6,7 @@
 ★ backplate 원고 규칙(tools/split_sections.mjs): h2 = 묶음, h3 = 슬라이드 한 장,
   h3 의 `data-say` = 내레이션, `data-id` = 이미지 원장 키. 본문은 h3 의 형제 요소이고
   렌더 높이 약 600px 에서 잘린다 → 판서는 2~4줄로 짧게.
-★ 기출 맛보기 슬라이드는 **LLM 없이** 문항 데이터로 만든다(문제·보기·explanation_speech).
+★ 연습문제 슬라이드는 **LLM 없이** 문항 데이터로 만든다(문제·보기·explanation_speech).
 """
 from __future__ import annotations
 
@@ -270,13 +270,13 @@ def passage_say(passage: str) -> str:
 
 def example_label(k: int) -> str:
     # ★ 영상에는 회차·번호를 남기지 않는다(사용자 지시 2026-10-09: 「모의 N회 M번」도 「문제 12」도 쓰지 않음 —
-    #   출간본·사이트의 번호와 다를 수 있다). k 는 말 순서(첫 문제/다음 문제)에만 쓴다. 교재(s8)는 「기출 맛보기 k」.
-    return "기출 맛보기"
+    #   출간본·사이트의 번호와 다를 수 있다). k 는 말 순서(첫 문제/다음 문제)에만 쓴다. 교재(s8)는 「연습문제 k」.
+    return "연습문제"
 
 
 def question_card(q: Dict[str, Any], k: int) -> str:
     choices = q.get("choices") or []
-    # ★ 칩(「기출 맛보기」)은 넣지 않는다 — 장 제목과 같은 말이 두 번 나왔다(사용자 지시 2026-10-09)
+    # ★ 칩(「연습문제」)은 넣지 않는다 — 장 제목과 같은 말이 두 번 나왔다(사용자 지시 2026-10-09)
     return ('<div class="qc">'
             f'<div class="qq">{html.escape(q.get("question", ""))}</div>'
             + (f'<div class="qp">{passage_html(q.get("passage") or "", q.get("assets") or [])}</div>' if q.get("passage") else "")
@@ -315,7 +315,7 @@ def jamo_read(text: str) -> str:
 
 
 def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
-    """기출 맛보기 2장 — 문제 장(카드 이미지 + 강사식 읽기), 풀이 장(말 해설).
+    """연습문제 2장 — 문제 장(카드 이미지 + 강사식 읽기), 풀이 장(말 해설).
 
     ★ 지문을 글자 그대로 읽지 않는다(실측: "- (가) … — …「」" 를 다 읽어 어색했다). 기호는 말로 풀고,
       표·코드·그림이 있거나 길면 「화면의 자료를 보십시오」로 넘어간다.
@@ -341,7 +341,7 @@ def example_slides(q: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
     elif tags:
         key = f" 핵심은 {tags[0]}입니다."
     what = f"{stem}을 고르는 문제입니다" if stem.endswith("것") else f"{stem}, 이것을 묻는 문제입니다"
-    lead = "기출 맛보기입니다." if k <= 1 else "다음 문제입니다."
+    lead = "연습문제입니다." if k <= 1 else "다음 문제입니다."
     say_q = (f"{lead} {what}.{key} "
              "화면의 자료와 보기를 보면서 잠시 정답을 골라 보십시오.")
     expl = q.get("explanation") or ""
@@ -600,7 +600,7 @@ def build_section(job: Job, L: Dict[str, Any], i: int, sec_meta: Dict[str, Any],
         k = order.get((e["round"], e["no"]), 1)
         tgt = by_sub.get(e["anchor"]) or (concept[-1] if concept else None)
         if tgt is None:
-            tgt = {"sub_id": e["anchor"], "title": "기출 맛보기", "slides": []}
+            tgt = {"sub_id": e["anchor"], "title": "연습문제", "slides": []}
             groups.append(tgt)
         tgt["slides"].extend(example_slides(q, k))
     # wrap 은 항상 맨 뒤

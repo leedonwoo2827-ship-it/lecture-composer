@@ -7,7 +7,7 @@
     본문      : 내레이션(say)을 문어체(~다) 문단으로 — 사실·순서는 그대로, 말버릇·인사·"다음 장에서" 제거
     도식      : 원고의 FIG(SVG·표)를 그 자리에 그대로(EPUB3 는 인라인 SVG 를 지원한다)
     핵심 정리 : 소주제마다 판서(bullets)를 상자로
-    기출 맛보기: 문제·보기 → 정답·해설(말 대본이 아니라 글 해설 explanation)
+    연습문제: 문제·보기 → 정답·해설(말 대본이 아니라 글 해설 explanation)
 
 `book_export.style`
     prose    (기본) Claude 로 문어체 변환 — 섹션당 1회 호출, 해시 캐시
@@ -145,7 +145,7 @@ def md_blocks(text: str, assets: List[Dict[str, Any]]) -> str:
 
 
 def example_box(q: Dict[str, Any], title: str) -> str:
-    """기출 맛보기 — 위아래 선만 두른 블록. 끝의 <!--ex--> 는 to_markdown 이 블록 끝을 찾는 표시다."""
+    """연습문제 — 위아래 선만 두른 블록. 끝의 <!--ex--> 는 to_markdown 이 블록 끝을 찾는 표시다."""
     ch = q.get("choices") or []
     ans = int(q.get("answer_index", 0))
     assets = q.get("assets") or []
@@ -194,7 +194,7 @@ def chapter_xhtml(job: Job, L: Dict[str, Any], mans: List[Dict[str, Any]], prose
                 m = re.search(r"모의 (\d+)회 (\d+)번", s["title"])
                 q = rounds.get((int(m.group(1)), int(m.group(2)))) if m else None
                 if q:
-                    b.append(example_box(q, f"기출 맛보기 — {s['title'].split('·', 1)[-1].strip()}"))
+                    b.append(example_box(q, f"연습문제 — {s['title'].split('·', 1)[-1].strip()}"))
     return "\n".join(b)
 
 
@@ -335,7 +335,7 @@ def to_markdown(title: str, body: str) -> tuple:
         return "\n\n" + "\n".join("> " + l for l in lines) + "\n\n"
 
     def ex(m: re.Match) -> str:
-        # 기출 맛보기는 인용 상자가 아니라 위아래 가로줄(---) 사이에 — 안의 표·도식은 아래 일반 변환이 처리한다
+        # 연습문제는 인용 상자가 아니라 위아래 가로줄(---) 사이에 — 안의 표·도식은 아래 일반 변환이 처리한다
         inner = re.sub(r"<ol>(.*?)</ol>", lambda o: "".join(
             f"<p>{CIRCLED[i] if i < 5 else i + 1} {_txt(t)}</p>"
             for i, t in enumerate(re.findall(r"<li>(.*?)</li>", o.group(1), re.S))), m.group(1), flags=re.S)

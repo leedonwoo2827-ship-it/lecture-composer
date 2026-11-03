@@ -154,7 +154,7 @@ SLIDE_GAP = 0.45      # 장 사이 숨(render/hyper.py TAIL_SEC)
 
 
 def examples_per_lecture(job: Job) -> int:
-    """영상에 넣는 기출 맛보기 수. curriculum.video_examples=false 면 0 — 영상은 개념만, 문제는 교재에만
+    """영상에 넣는 연습문제 수. curriculum.video_examples=false 면 0 — 영상은 개념만, 문제는 교재에만
     (사용자 결정 2026-10-09: 「종합본 강의에는 문제가 안 나와도 된다, 책에는 자주 나와도 된다」)."""
     if not job.get("curriculum.video_examples", True):
         return 0
@@ -162,7 +162,7 @@ def examples_per_lecture(job: Job) -> int:
 
 
 def fill_to_target(job: Job, lid: str) -> int:
-    """집필이 끝난 강의 **실제 원고 길이**를 재서, 강 길이 목표에 모자란 만큼 기출 맛보기를 더 넣는다.
+    """집필이 끝난 강의 **실제 원고 길이**를 재서, 강 길이 목표에 모자란 만큼 연습문제를 더 넣는다.
 
     ★ 원고는 목표 분량보다 짧게 나오기도 한다(2026-10-09 L01: 25.1분/30분). 모자란 시간은 문제로 채운다 —
       문항 하나 ≈ 37.5초(문제 장 + 풀이 장, L01·L02 실측). 강의 섹션들이 가리키는 문항 중, 다른 강이 아직 안 쓴 것만.
@@ -211,7 +211,7 @@ def fill_to_target(job: Job, lid: str) -> int:
     p["examples_sec"] = round(sum(question_seconds(rounds[(e["round"], e["no"])], cps) for e in L["examples"]))
     p["filled"] = len(extra)
     write_json(out, doc)
-    log(f"{lid} 원고 {total / 60:.1f}분 → {short / 60:.1f}분 모자라 기출 맛보기 {len(extra)}문항 추가(총 {len(L['examples'])})")
+    log(f"{lid} 원고 {total / 60:.1f}분 → {short / 60:.1f}분 모자라 연습문제 {len(extra)}문항 추가(총 {len(L['examples'])})")
     return len(extra)
 
 
@@ -237,12 +237,12 @@ def build(job: Job) -> Dict[str, Any]:
 
     rounds_dir = job.path(job.get("inputs.rounds_dir"))
     rounds = load_rounds(rounds_dir) if rounds_dir and rounds_dir.exists() else {}
-    # ★ 예시(기출 맛보기)는 **고정 예산**이다(기본 14분). 문항이 아직 없거나 확정 전이어도 그 자리를
+    # ★ 예시(연습문제)는 **고정 예산**이다(기본 14분). 문항이 아직 없거나 확정 전이어도 그 자리를
     #   비워 두고 개념 분량을 정한다 → 나중에 문항이 들어와도 개념 분량·원고가 흔들리지 않는다
     #   (`run.bat examples` 가 예시만 채운다). examples_per_lecture=0 이면 예산도 0(개념만).
     budget_sec = (float(c.get("examples_budget_min", 14)) * 60) if n_ex > 0 else 0.0
     if not rounds and budget_sec:
-        warn(f"문항(_rounds)이 아직 없습니다 — 강마다 기출 맛보기 자리 {budget_sec / 60:.0f}분을 비워 두고 편성합니다"
+        warn(f"문항(_rounds)이 아직 없습니다 — 강마다 연습문제 자리 {budget_sec / 60:.0f}분을 비워 두고 편성합니다"
              "(문항을 넣은 뒤 run.bat examples)")
 
     lectures: List[Dict[str, Any]] = []

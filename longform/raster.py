@@ -65,7 +65,7 @@ CARD_CSS = """
 
 
 def card_slide(card_html: str, bottom_pct: float = 5) -> str:
-    """기출 맛보기 문제 카드 — 위 제목 띠(12%)는 비우고 문제·지문(코드·그림·표)·보기를 담는다."""
+    """연습문제 문제 카드 — 위 제목 띠(12%)는 비우고 문제·지문(코드·그림·표)·보기를 담는다."""
     return f"<style>{CARD_CSS}.qc{{bottom:{bottom_pct}%}}</style>{card_html}"
 
 
@@ -193,7 +193,7 @@ CARD_BOTTOM_MIN = 16      # 카드 아래 끝 — 자막 띠·플레이어 조�
 
 def card_slide_themed(card_html: str, th: Dict[str, Any], top_pct: float = 31,
                       bottom_pct: float = CARD_BOTTOM_MIN) -> str:
-    """기출 맛보기 문제 카드 — 테마 판. 글자 크기 자동 축소는 fit_card 와 같은 규칙.
+    """연습문제 문제 카드 — 테마 판. 글자 크기 자동 축소는 fit_card 와 같은 규칙.
     ★ 보기가 모두 짧으면(24자 이하) 2열로 놓아 세로를 아낀다 — 아래가 잘리는 것보다 낫다."""
     ink, acc = th["ink"], th["accent"]
     bottom_pct = max(bottom_pct, CARD_BOTTOM_MIN)

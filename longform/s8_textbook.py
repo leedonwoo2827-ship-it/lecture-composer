@@ -1,6 +1,6 @@
 """s8 — 교재(종합본) 원고 작성. 이 강의의 교재를 **새로 쓴다**(강의 원고를 옮기는 것이 아니다).
 
-    재료  요약노트(사실) + 강의 원고(manuscripts/, 설명 흐름) + 도식 + 문항(기출 맛보기)
+    재료  요약노트(사실) + 강의 원고(manuscripts/, 설명 흐름) + 도식 + 문항(연습문제)
     집필  섹션마다 Claude 1회 → jobs/<잡>/textbook/Lxx/<섹션>.json (해시 캐시, 깃에 올림 — 검수·수정 대상)
     조립  과목마다 HTML 하나 → out/textbook/NN-textbook-<과목>.html
           ★ 요약노트(03/summary_*.html)와 **같은 형식**(그 <style>, h1 과목 · h2 · h3 · div.fig 인라인 SVG)이다.
@@ -11,7 +11,7 @@
     h2 제N강 제목 · 학습 목표 · 도입
       h3 섹션(요약노트 번호 그대로)
         h4 소주제 — 본문 문단 · 도식 · 핵심 정리 · 주의
-        기출 맛보기(문제·보기·정답·글 해설)
+        연습문제(문제·보기·정답·글 해설)
     이 장의 핵심
 """
 from __future__ import annotations
@@ -184,7 +184,7 @@ def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], L
             q = rounds.get((e["round"], e["no"]))
             if q:
                 k += 1
-                b.append(example_box(q, f"기출 맛보기 {k}"))
+                b.append(example_box(q, f"연습문제 {k}"))
         # ★ 책에는 문제를 더 싣는다(사용자 지시 2026-10-09) — 이 절의 요약노트 배지가 가리키는 문항 중
         #   영상에 안 나온 것, 책 전체에서 아직 안 쓴 것. 영상 문항과 같은 번호 줄로 이어 센다.
         if book_extra and rounds:
@@ -195,7 +195,7 @@ def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], L
                 q = rounds.get((e["round"], e["no"]))
                 if q:
                     k += 1
-                    b.append(example_box(q, f"기출 맛보기 {k}"))
+                    b.append(example_box(q, f"연습문제 {k}"))
                     if book_used is not None:
                         book_used.add((e["round"], e["no"]))
     last = parts[-1][1] if parts else {}

@@ -228,7 +228,7 @@ td .b{padding:3px 8px;font-size:12px}td.row{flex-wrap:nowrap;gap:4px}td .mini{wh
     <details><summary>폴더 구조</summary><pre class="mini" style="margin:6px 0 0">jobs/&lt;작업&gt;/   job.json(목표서) · brief.md(기획 메모) · curriculum.json(편성표)
   input/notes/     요약노트 (필수 · 강 나누기의 뼈대)
   input/scripts/   영상 원고 (권장 · 있으면 확장비가 크게 줄어듭니다)
-  input/rounds/    문항 mNN.json (선택 · 기출 맛보기 · 없으면 예시 자리 14분을 비워 두고 진행)
+  input/rounds/    문항 mNN.json (선택 · 연습문제 · 없으면 예시 자리 14분을 비워 두고 진행)
   input/review.html  리뷰 페이지 (선택 · 등록 단계)
   manuscripts/ · out/ · meta/   ② 만들기의 결과</pre></details>
   </div>
@@ -385,7 +385,7 @@ $("#g-save").onclick=async()=>{ try{ JSON.parse($("#g-text").value); }catch(e){ 
 const DROPS = [
   {k:"notes",   n:"① 요약노트 (필수)", acc:".html,.htm", d:"과목→항목→상세 HTML. h2 = 섹션, h3 = 소주제. 구조와 문항 근거(「모의 N회 M번」)의 출처."},
   {k:"scripts", n:"② 영상 원고 (선택, 권장)", acc:".html,.htm", d:"summaryhtml2videoscripthtml 산출물. h3 의 data-say·data-read 와 도식을 뼈대로 씁니다 — 있으면 확장비가 크게 줄어듭니다."},
-  {k:"rounds",  n:"③ 문항 (선택)", acc:".json", d:"자사 모의고사 회차 mNN.json. 기출 맛보기의 출처. 없으면 개념 강의만 만듭니다."},
+  {k:"rounds",  n:"③ 문항 (선택)", acc:".json", d:"자사 모의고사 회차 mNN.json. 연습문제의 출처. 없으면 개념 강의만 만듭니다."},
   {k:"review",  n:"④ 리뷰 페이지 (선택)", acc:".html,.htm", d:"VIDEOS_BY_TAB 가 있는 review.html. 등록 단계가 강 목록을 넣은 사본을 out/register/ 에 만듭니다(탭 키는 목표서 register.review_tab)."},
 ];
 function descr(k,f){
