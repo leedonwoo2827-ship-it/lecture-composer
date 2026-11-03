@@ -49,7 +49,7 @@
   "backplate": {
     "dir": "engine/backplate",
     "workspace": "jobs/sqld-danjeong-sample/bp",
-    "voice": "F2",
+    "voice": "F1",
     "speed": 1.05,
     "image_mode": "section",
     "bg_per_section": 3,
