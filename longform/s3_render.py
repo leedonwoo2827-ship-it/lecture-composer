@@ -32,6 +32,7 @@ from longform import accounts
 from longform.config import REPO, Job
 from longform.notes import chars
 from longform import theme as vtheme
+from longform import voice
 from longform.raster import card_slide_themed, fit_card, render_many, svg_slide, svg_slide_themed
 from longform.state import State, sha
 from longform.util import log, read_json, run as run_cmd, warn, write_json
@@ -272,7 +273,9 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
             # ★ 표 도식 모양을 바꾸면(2026-10-02) 표가 든 섹션만 다시 렌더된다
             *(["table_v2"] if any((f or "").lstrip().lower().startswith("<table") for f in man.get("figs") or []) else []),
             # ★ 영상 테마를 바꾸면 섹션이 다시 렌더된다(그림은 캐시를 다시 쓴다)
-            *([f"theme:{th['name']}:6", lecture_span(job, L, sec_i, mode)] if th else []))
+            *([f"theme:{th['name']}:6", lecture_span(job, L, sec_i, mode)] if th else []),
+            # ★ 음성 체크에서 발음을 고친 섹션만 다시 렌더된다(고친 것이 없으면 해시 그대로 — longform/voice.py)
+            *([f"voice:{vs}"] if (vs := voice.section_sig(job, lid, man, sid)) else []))
     key = f"s3:{sid}"
     if not force and state.done(lid, key, h) and out_mp4.exists():
         log(f"{lid} {sid} 렌더 — 그대로")
@@ -335,7 +338,11 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
     #   h3 의 data-read 도 버린다(발음을 자막에서 다시 만든다 — s6_script.py:303).
     #   원고의 자막·발음이 그대로 나가도록 **덮어쓰기 narration 으로 못 박는다**:
     #   srt_text = data-say(자막), text = data-read(TTS 입력). text 를 안 주면 자막에서 만든다.
-    def narr(say: str, read: str) -> Dict[str, str]:
+    v_ov, v_dict = voice.load_overlay(job, lid), voice.load_dict(job)
+
+    def narr(say: str, read: str, key: str = "") -> Dict[str, str]:
+        if key:                                         # 음성 체크에서 고친 발음·발음 사전
+            read = voice.render_read(job, lid, key, say, read, v_ov, v_dict)
         d = {"srt_text": say}
         if read.strip():
             d["text"] = read
@@ -345,13 +352,13 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
         cv = man.get("cover") or {}
         if first and cv.get("say"):
             ov["slides"][str(cover)] = {"title": f"{L['no']}강 · {L['title']}",
-                                        "narration": narr(cv["say"], cv.get("read", ""))}
+                                        "narration": narr(cv["say"], cv.get("read", ""), f"{sid}:cover")}
         else:
             ov["slides"][str(cover)] = {"drop": True, "narration": {"srt_text": "", "text": ""}}  # 빠지는 장은 음성도 만들지 않는다
     if closing:
         oc = man.get("outro") or {}
         if last and oc.get("say"):
-            ov["slides"][str(closing)] = {"narration": narr(oc["say"], oc.get("read", ""))}
+            ov["slides"][str(closing)] = {"narration": narr(oc["say"], oc.get("read", ""), f"{sid}:outro")}
         else:
             ov["slides"][str(closing)] = {"drop": True, "narration": {"srt_text": "", "text": ""}}  # 빠지는 장은 음성도 만들지 않는다
 
@@ -376,7 +383,7 @@ def render_section(job: Job, bp: Backplate, state: State, L: Dict[str, Any], sec
         no = by_id.get(s["id"])
         if not no:
             continue
-        ov["slides"][str(no)] = {"narration": narr(s["say"], s.get("read", ""))}
+        ov["slides"][str(no)] = {"narration": narr(s["say"], s.get("read", ""), s["id"])}
         if mode != "backplate":
             # backplate 방식에서는 라벨(자리·문구)도 엔진의 이미지 설계(s3a)가 그림과 함께 정한다
             ov["slides"][str(no)]["labels"] = labels_for(s, has_bg, sub_band, th)

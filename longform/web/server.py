@@ -614,7 +614,94 @@ def open_folder(job: str, what: str = "job") -> Dict[str, str]:
     return {"opened": str(f)}
 
 
-SERVER_VERSION = "2026-10-06.2"
+# ── 음성 체크 — 장마다 듣고 발음(TTS 입력)을 고친다(longform/voice.py) ──────────────────
+@app.get("/api/voice")
+def voice_rows(job: str, lid: str) -> Dict[str, Any]:
+    from longform import voice
+    try:
+        return voice.rows(_job(job), lid)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/api/voice/audio")
+def voice_audio(job: str, lid: str, sid: str, no: int) -> FileResponse:
+    tm = read_json(_job(job).out_dir / lid / "parts" / f"{sid}.timing.json", {}) or {}
+    f = Path(tm.get("project") or "") / "07_음성" / "tts" / f"{int(no):03d}.wav"
+    if not tm.get("project") or not f.is_file():
+        raise HTTPException(404, "음성 파일이 없습니다(렌더 전이거나 엔진 작업 폴더가 지워짐)")
+    return FileResponse(f, media_type="audio/wav", headers={"Cache-Control": "no-store"})
+
+
+@app.put("/api/voice")
+async def voice_save(request: Request) -> Dict[str, Any]:
+    from longform import voice
+    b = await request.json()
+    voice.save_overlay(_job(b["job"]), b["lid"], b["key"],
+                       read=b.get("read"), checked=b.get("checked"))
+    return {"ok": True}
+
+
+@app.post("/api/voice/ai")
+async def voice_ai(request: Request) -> Dict[str, Any]:
+    """AI 발음 교정 — Claude 가 자막을 소리 나는 대로 바꾼다(저장은 화면에서)."""
+    from longform import voice
+    b = await request.json()
+    import asyncio
+    read = await asyncio.to_thread(voice.ai_read, _job(b["job"]), b["say"], b.get("read") or "")
+    return {"read": read}
+
+
+@app.post("/api/voice/synth")
+async def voice_synth(request: Request) -> Dict[str, Any]:
+    """그 장만 다시 합성 — 엔진의 같은 보이스·속도로. 렌더가 돌고 있으면 엔진 폴더가 엉키므로 막는다."""
+    from longform import voice
+    from longform.s3_render import Backplate
+    b = await request.json()
+    if RUN.running():
+        raise HTTPException(409, "실행 중에는 다시 합성할 수 없습니다 — 끝난 뒤에 하십시오")
+    j = _job(b["job"])
+    lid, sid, no, key = b["lid"], b["sid"], int(b["no"]), b["key"]
+    if b.get("read") is not None:
+        voice.save_overlay(j, lid, key, read=b["read"])
+    from longform.state import State
+    pid = (State(j).get(lid, f"s3:{sid}") or {}).get("pid")
+    if not pid:
+        raise HTTPException(404, "엔진 프로젝트를 찾지 못했습니다(렌더 전)")
+    row = next((r for r in voice.rows(j, lid)["rows"] if r["key"] == key), None)
+    if not row:
+        raise HTTPException(404, f"장을 찾지 못했습니다: {key}")
+    nar = {"srt_text": row["say"], "text": row["read"]}
+    import asyncio
+    import tempfile
+    bp = Backplate(j)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
+        json.dump(nar, fh, ensure_ascii=False)
+        tmp = fh.name
+    try:
+        r = await asyncio.to_thread(bp.helper, "synth", str(pid), str(no), tmp)
+    except SystemExit as e:
+        raise HTTPException(500, str(e)[-400:])
+    finally:
+        os.unlink(tmp)
+    return {"ok": True, "sec": r.get("duration_sec"), "read": row["read"]}
+
+
+@app.get("/api/voice/dict")
+def voice_dict(job: str) -> List[Dict[str, str]]:
+    from longform import voice
+    return voice.load_dict(_job(job))
+
+
+@app.put("/api/voice/dict")
+async def voice_dict_save(request: Request) -> Dict[str, Any]:
+    from longform import voice
+    b = await request.json()
+    voice.save_dict(_job(b["job"]), b.get("rows") or [])
+    return {"ok": True}
+
+
+SERVER_VERSION = "2026-11-03.1"
 
 
 @app.get("/api/version")

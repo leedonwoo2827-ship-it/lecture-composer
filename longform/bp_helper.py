@@ -4,6 +4,7 @@
     python bp_helper.py outline  <pid>         → s2b-outline 캐시의 slides(no, data_id, kind, title)
     python bp_helper.py override <pid> <patch.json>   → deck.overrides.json 에 병합 + overrides_rev++
     python bp_helper.py project  <pid> <patch.json>   → project.json 에 병합
+    python bp_helper.py synth    <pid> <no> <narration.json> → 그 장 발음을 덮어쓰고 그 장만 다시 합성
 
 ★ SHOWCASE_WORKSPACE 는 호출하는 쪽(s3_render)이 환경변수로 넘긴다.
 ★ 생성 로직은 server.py create_project() 를 그대로 옮겼다(웹 UI 와 같은 project.json).
@@ -94,6 +95,15 @@ def project(pid: int, patch: dict) -> dict:
     return {"ok": True}
 
 
+def synth(pid: int, no: int, narration: dict) -> dict:
+    """음성 체크 — 그 장의 덮어쓰기 발음을 바꾸고 **그 장만** 다시 합성한다(엔진 s10_tts.synth_one, 같은 보이스·속도)."""
+    override(pid, {"slides": {str(no): {"narration": narration}}})
+    pid, slug = _find(pid)
+    from pipeline import s10_tts
+    r = s10_tts.synth_one(pid, slug, no)
+    return {**r, "path": str(ws.project_dir(pid, slug) / r["file"])}
+
+
 def main() -> None:
     cmd = sys.argv[1]
     if cmd == "create":
@@ -104,6 +114,8 @@ def main() -> None:
         out = override(int(sys.argv[2]), json.loads(Path(sys.argv[3]).read_text(encoding="utf-8")))
     elif cmd == "project":
         out = project(int(sys.argv[2]), json.loads(Path(sys.argv[3]).read_text(encoding="utf-8")))
+    elif cmd == "synth":
+        out = synth(int(sys.argv[2]), int(sys.argv[3]), json.loads(Path(sys.argv[4]).read_text(encoding="utf-8")))
     else:
         raise SystemExit(f"unknown: {cmd}")
     sys.stdout.write("@@JSON@@" + json.dumps(out, ensure_ascii=False) + "\n")
