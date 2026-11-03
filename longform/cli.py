@@ -14,6 +14,7 @@
   s6 publish     게시          YouTube Studio 자동 업로드(일부공개)
   s7 register    등록          사이트 youtube_map · review.html · 기록(statements.jsonl)
   s8 textbook    교재          교재(종합본) 원고 작성 — 요약노트 형식 과목별 HTML(+ md·PNG, epub 선택)  별칭: book
+                               + 이론편(문제 뺀 판) out/textbook_theory/ — 같은 집필 재사용
   whiteboard     화이트보드(시험) 완성된 강을 손글씨 화이트보드 화면으로 다시 굽는다(같은 원고·음성·시간축)
                                → out_wb/Lxx/Lxx.mp4  별칭: wb   (_new/whiteboard/wb_render.py)
   all            s1 → s7 (끝난 단계는 건너뜀. 책은 따로 s8)

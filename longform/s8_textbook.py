@@ -205,22 +205,31 @@ def lecture_html(L: Dict[str, Any], parts: List[Tuple[Section, Dict[str, Any], L
 
 
 def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Optional[Path]:
+    """종합본(문제 포함, out/textbook/) + 이론편(문제 뺀 판, out/textbook_theory/). 이론편은 같은 집필 캐시로
+    다시 묶기만 한다(Claude 를 다시 부르지 않음) — 최종 인쇄본(2차)은 문제를 모두 뺀다(사용자 지시 2026-11-03)."""
+    odir = _build(job, only, force, theory=False)
+    if odir:
+        _build(job, only, False, theory=True)
+    return odir
+
+
+def _build(job: Job, only: Optional[List[str]], force: bool, theory: bool) -> Optional[Path]:
     cur = read_json(job.dir / "curriculum.json")
     if not cur:
         raise SystemExit("[error] curriculum.json 이 없습니다 — 먼저 plan")
     notes, scripts = load_inputs(job)
     by_sub = {n.subject_no: n for n in notes}
     rd = job.path(job.get("inputs.rounds_dir"))
-    rounds = load_rounds(rd) if rd and rd.exists() else {}
+    rounds = {} if theory else (load_rounds(rd) if rd and rd.exists() else {})
     state = State(job)
-    odir = job.out_dir / "textbook"
+    odir = job.out_dir / ("textbook_theory" if theory else "textbook")
     odir.mkdir(parents=True, exist_ok=True)
-    title = job.get("book_export.title") or f"{job.get('title')} 교재"
+    title = (job.get("book_export.title") or f"{job.get('title')} 교재") + (" — 이론편" if theory else "")
 
     files: List[Path] = []
     chapters: List[Dict[str, str]] = []
     # 책에만 더 싣는 문항 — 절마다 N개(영상 문항 밖), 책 전체에서 한 번씩만
-    book_extra = int(job.get("book_export.examples_per_section", 10))
+    book_extra = 0 if theory else int(job.get("book_export.examples_per_section", 10))
     book_used: set = set()
     for sno in sorted({L["subject_no"] for L in cur["lectures"]}):
         note: Optional[Note] = by_sub.get(int(sno))
@@ -249,9 +258,9 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
             continue
         m = re.search(r"summary[_-]?(.+)$", note.file.stem)
         key = (m.group(1) if m else note.file.stem).strip("_-") or f"part{sno}"
-        f = odir / f"{int(sno):02d}-textbook-{key}.html"
+        f = odir / f"{int(sno):02d}-{'theory' if theory else 'textbook'}-{key}.html"
         css = (note.style or BASE_CSS) + EXTRA_CSS
-        f.write_text(f"<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\"><title>{esc(note.subject)} — 교재</title>"
+        f.write_text(f"<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\"><title>{esc(note.subject)} — {'이론편' if theory else '교재'}</title>"
                      f"<style>{css}</style></head><body>\n<h1>{esc(note.subject)}</h1>\n" + "\n".join(body) + "\n</body></html>",
                      encoding="utf-8")
         md, figs = to_markdown(note.subject, "\n".join(body))
@@ -260,7 +269,7 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
         svgs_to_png([(svg, img / name) for name, svg in figs])
         f.with_suffix(".md").write_text(md.replace("](img/", f"]({img.name}/"), encoding="utf-8")
         files.append(f)
-        log(f"{note.subject} 교재 → {f.name} (+ {f.with_suffix('.md').name}, 도식 PNG {len(figs)}장)")
+        log(f"{note.subject} {'이론편' if theory else '교재'} → {f.name} (+ {f.with_suffix('.md').name}, 도식 PNG {len(figs)}장)")
     if not files:
         log("교재로 묶을 강이 없습니다")
         return None
@@ -268,5 +277,5 @@ def run(job: Job, only: Optional[List[str]] = None, force: bool = False) -> Opti
         ep = odir / f"{job.name}-textbook.epub"
         write_epub(ep, title, job.get("author", "") or job.get("book", ""), chapters)
         log(f"EPUB → {ep.name}")
-    log(f"교재 {len(files)}개 과목 → {odir}  (요약노트와 같은 HTML 형식 — HWPX 변환에 그대로 넣으면 됩니다)")
+    log(f"{'이론편(문제 없음)' if theory else '교재'} {len(files)}개 과목 → {odir}  (요약노트와 같은 HTML 형식 — HWPX 변환에 그대로 넣으면 됩니다)")
     return odir
